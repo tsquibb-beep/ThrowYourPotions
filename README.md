@@ -32,6 +32,8 @@ that copy is read in preference to the one in the mod folder.
 | `fontSize`, `textColor`, `outlineColor`, `outlineSize` | 140, cream, near-black, 24 | How the text looks. `textColor` applies to the `plain` style only. |
 | `textStyle` | `"gold"` | `"gold"`, `"slime"` (Foul Potion green), `"rainbow"` (every letter a different colour), or `"plain"`. |
 | `wordStepSeconds`, `wordTiltDegrees` | 0.2, 6 | The words land one at a time, stacked and crooked. |
+| `strobe`, `strobeSeconds`, `strobeWidth`, `strobeColor` | true, 0.055, 2, white | A light chasing through the letters. |
+| `sizeJitter`, `sizeJitterAmount`, `sizeJitterSeconds` | true, 0.06, 0.32 | Each word breathing in and out of size. |
 | `textMotion` | `"jitter"` | `"jitter"` shakes the letters, `"sine"` bobs them, `"none"` holds still. |
 | `flash`, `flashColor` | true, slime green | A full-screen colour wash as the text lands. |
 | `holdSeconds` | `1.4` | How long it stays before fading. |
@@ -41,7 +43,7 @@ that copy is read in preference to the one in the mod folder.
 | `soundCount` | `10` | How many merchant noises. This is the point of the mod. |
 | `soundGapSeconds` | `0.12` | Gap between them. Small, so they overlap. |
 | `soundVolume` | `1.0` | Quieter, if you are a coward. |
-| `soundSet` | `"buy"` | `"buy"` is his purchase noise alone; `"mix"` cycles every noise he has, which is denser. |
+| `soundSet` | `"mix"` | `"buy"` is his purchase noise alone; `"mix"` cycles every noise he has, which is denser. |
 | `soundWaveSeconds` | `1.3` | How long before the same noise can play again. Lower it for a faster racket. |
 | `delaySeconds` | `0.6` | Wait after arriving, so it does not play under the room's fade-in. |
 

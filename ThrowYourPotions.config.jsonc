@@ -10,7 +10,7 @@
 
     // The big text. Set showText to false for noise only.
     "showText": true,
-    "text": "THROW YOUR POTIONS",
+    "text": "THROW YOUR POTIONS!!",
 
     // How the letters look and move, using the game's own text effects.
     //   textStyle:  "rainbow" (every letter a different colour), "gold",
@@ -18,6 +18,18 @@
     //   textMotion: "jitter" (shakes), "sine" (bobs), or "none"
     "textStyle": "gold",
     "textMotion": "jitter",
+
+    // A light running through the letters, over and over. strobeSeconds is how
+    // long it spends on each letter, strobeWidth how many light up at once.
+    "strobe": true,
+    "strobeSeconds": 0.055,
+    "strobeWidth": 2,
+    "strobeColor": "#ffffff",
+
+    // Each word breathing in and out of size, each at its own speed.
+    "sizeJitter": true,
+    "sizeJitterAmount": 0.06,
+    "sizeJitterSeconds": 0.32,
 
     // The words land one at a time, stacked down the screen and sitting crooked.
     // wordStepSeconds is the beat between them; wordTiltDegrees is how skewed
@@ -66,7 +78,7 @@
     // "buy" repeats only his purchase noise — but the sound engine refuses to
     // play a voice line over itself, so "buy" ends up almost silent. Mix is the
     // default for that reason.
-    "soundSet": "buy",
+    "soundSet": "mix",
 
     // How long to wait after arriving before going off. Room entry happens behind
     // a fade to black, so firing immediately would play under it.

@@ -25,7 +25,34 @@ internal sealed class ThrowConfig
     public bool ShowText { get; set; } = true;
 
     [JsonPropertyName("text")]
-    public string Text { get; set; } = "THROW YOUR POTIONS";
+    public string Text { get; set; } = "THROW YOUR POTIONS!!";
+
+    /// <summary>A light running through the letters, left to right, over and over.</summary>
+    [JsonPropertyName("strobe")]
+    public bool Strobe { get; set; } = true;
+
+    /// <summary>How long the light spends on each letter. Lower is faster.</summary>
+    [JsonPropertyName("strobeSeconds")]
+    public float StrobeSeconds { get; set; } = 0.055f;
+
+    /// <summary>How many letters light up at once as it passes.</summary>
+    [JsonPropertyName("strobeWidth")]
+    public int StrobeWidth { get; set; } = 2;
+
+    [JsonPropertyName("strobeColor")]
+    public string StrobeColorHex { get; set; } = "#ffffff";
+
+    /// <summary>Each word breathing in and out of size while it sits there.</summary>
+    [JsonPropertyName("sizeJitter")]
+    public bool SizeJitter { get; set; } = true;
+
+    /// <summary>How much bigger and smaller, as a fraction. 0.06 is a 6% wobble.</summary>
+    [JsonPropertyName("sizeJitterAmount")]
+    public float SizeJitterAmount { get; set; } = 0.06f;
+
+    /// <summary>Seconds for one breath. Each word is given its own speed around this.</summary>
+    [JsonPropertyName("sizeJitterSeconds")]
+    public float SizeJitterSeconds { get; set; } = 0.32f;
 
     [JsonPropertyName("fontSize")]
     public int FontSize { get; set; } = 140;
@@ -119,7 +146,7 @@ internal sealed class ThrowConfig
     /// distinct noises can sound at once; lower soundWaveSeconds to make "buy" repeat faster.
     /// </summary>
     [JsonPropertyName("soundSet")]
-    public string SoundSet { get; set; } = "buy";
+    public string SoundSet { get; set; } = "mix";
 
     /// <summary>
     /// Wait this long after arriving before going off. Room entry happens behind a fade to black
@@ -169,6 +196,16 @@ internal sealed class ThrowConfig
     public float WordStep => Math.Clamp(WordStepSeconds, 0f, 2f);
 
     public float WordTilt => Math.Clamp(WordTiltDegrees, 0f, 45f);
+
+    public float StrobeStep => Math.Clamp(StrobeSeconds, 0.01f, 1f);
+
+    public int StrobeLetters => Math.Clamp(StrobeWidth, 1, 12);
+
+    public Color StrobeColor => ParseColor(StrobeColorHex, "#ffffff");
+
+    public float JitterAmount => Math.Clamp(SizeJitterAmount, 0f, 0.5f);
+
+    public float JitterSeconds => Math.Clamp(SizeJitterSeconds, 0.05f, 3f);
 
     public bool MixSounds => string.Equals(SoundSet?.Trim(), "mix", StringComparison.OrdinalIgnoreCase);
 

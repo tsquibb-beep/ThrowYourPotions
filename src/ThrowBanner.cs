@@ -45,6 +45,16 @@ internal static class ThrowBanner
 
     private static readonly Random _random = new();
 
+    /// <summary>
+    /// The size-pulse and strobe tweens for the banner currently on screen. They drive the same
+    /// properties as the exit animation, so they are killed before it starts rather than left to
+    /// fight it. Only one banner exists at a time, so one list is enough.
+    /// </summary>
+    private static readonly List<Tween> _loops = new();
+
+    /// <summary>The words as laid out, so the strobe can run a light through the whole phrase.</summary>
+    private static readonly List<(Control Label, string Text, int FirstLetter)> _lit = new();
+
     private static bool _loggedFirstBanner;
 
     /// <summary>
@@ -116,6 +126,10 @@ internal static class ThrowBanner
             return;
         }
 
+        // Anything still looping belongs to a banner that is on its way out.
+        StopLoops();
+        _lit.Clear();
+
         Font? font = container.GetThemeFont(ThemeConstants.Label.Font, "Label");
         float lineHeight = config.Size * 1.12f;
         float firstLineY = (viewport.Size.Y / 2f) - (((words.Length - 1) * lineHeight) / 2f);
@@ -128,10 +142,16 @@ internal static class ThrowBanner
                 + $"font={(font != null ? "theme" : "Godot default")}.");
         }
 
+        int letters = 0;
+
         for (int i = 0; i < words.Length; i++)
         {
             Control word = BuildRichWord(container, words[i], font, config)
                 ?? BuildPlainWord(words[i], font, config);
+
+            // Where this word's letters sit in the phrase, so the light can run straight through.
+            _lit.Add((word, words[i], letters));
+            letters += words[i].Length;
 
             // A band one line tall, centred horizontally, stacked down the screen. The rich label
             // lays its text out from the top of its rect and has no vertical alignment of its own,
@@ -152,6 +172,57 @@ internal static class ThrowBanner
             Control captured = word;
             Callable.From(() => AnimateWord(captured, config, at, last)).CallDeferred();
         }
+
+        if (config.Strobe && _lit.Count > 0 && _lit[0].Label is RichTextLabel)
+        {
+            StartStrobe(stack, config, letters);
+        }
+    }
+
+    /// <summary>
+    /// Runs a light through the letters, left to right, wrapping round for as long as the banner
+    /// is up. The text is static markup, so the movement comes from rewriting each word's markup
+    /// on a tick with a different letter picked out — cheap enough for three short words.
+    /// </summary>
+    private static void StartStrobe(Control stack, ThrowConfig config, int letters)
+    {
+        if (letters <= 0)
+        {
+            return;
+        }
+
+        int head = 0;
+        Tween strobe = stack.CreateTween().SetLoops();
+        strobe.TweenCallback(Callable.From(() =>
+        {
+            head = (head + 1) % letters;
+
+            foreach ((Control label, string text, int firstLetter) in _lit)
+            {
+                if (!GodotObject.IsInstanceValid(label) || label is not RichTextLabel rich)
+                {
+                    continue;
+                }
+
+                rich.Text = Markup(text, config, head - firstLetter);
+            }
+        })).SetDelay(config.StrobeStep);
+
+        _loops.Add(strobe);
+    }
+
+    /// <summary>Stops the looping strobe and size pulses so they cannot fight the exit animation.</summary>
+    private static void StopLoops()
+    {
+        foreach (Tween loop in _loops)
+        {
+            if (loop != null && loop.IsValid())
+            {
+                loop.Kill();
+            }
+        }
+
+        _loops.Clear();
     }
 
     /// <summary>
@@ -187,6 +258,14 @@ internal static class ThrowBanner
             }
         }
 
+        // Once it has landed, let it breathe: a size wobble at its own speed, so the three words
+        // are never in step with each other.
+        if (config.JitterAmount > 0f && config.SizeJitter)
+        {
+            tween.Chain();
+            tween.TweenCallback(Callable.From(() => StartSizePulse(word, config)));
+        }
+
         if (!last)
         {
             return;
@@ -196,6 +275,8 @@ internal static class ThrowBanner
         tween.Chain();
         tween.TweenInterval(config.Hold);
 
+        tween.Chain();
+        tween.TweenCallback(Callable.From(StopLoops));
         tween.Chain();
         Node? stack = word.GetParent();
         foreach (Control sibling in Siblings(stack))
@@ -214,6 +295,30 @@ internal static class ThrowBanner
                 stack.QueueFreeSafely();
             }
         }));
+    }
+
+    /// <summary>
+    /// A word breathing in and out of size, forever, until the exit kills it. Each word gets a
+    /// slightly different period so the stack never pulses as one block.
+    /// </summary>
+    private static void StartSizePulse(Control word, ThrowConfig config)
+    {
+        if (!GodotObject.IsInstanceValid(word) || !word.IsInsideTree())
+        {
+            return;
+        }
+
+        double period = config.JitterSeconds * (0.75 + (_random.NextDouble() * 0.5));
+        float big = 1f + config.JitterAmount;
+        float small = 1f - (config.JitterAmount * 0.6f);
+
+        Tween pulse = word.CreateTween().SetLoops();
+        pulse.TweenProperty(word, "scale", Vector2.One * big, period / 2f)
+            .SetEase(Tween.EaseType.InOut).SetTrans(Tween.TransitionType.Sine);
+        pulse.TweenProperty(word, "scale", Vector2.One * small, period / 2f)
+            .SetEase(Tween.EaseType.InOut).SetTrans(Tween.TransitionType.Sine);
+
+        _loops.Add(pulse);
     }
 
     private static IEnumerable<Control> Siblings(Node? parent) =>
@@ -292,31 +397,53 @@ internal static class ThrowBanner
     /// than nesting one big [jitter] around a coloured run, so every character reliably picks up
     /// both its colour and its motion.
     /// </summary>
-    private static string Markup(string word, ThrowConfig config)
+    private static string Markup(string word, ThrowConfig config, int litIndex = -1)
     {
         string[] rainbow = { "red", "orange", "gold", "green", "aqua", "blue", "purple", "pink" };
         string motion = config.Motion is "jitter" or "sine" ? config.Motion : "";
+        string litHex = config.StrobeColor.ToHtml(false);
 
         var built = new StringBuilder("[center]");
         int letter = 0;
 
-        foreach (char c in word)
+        for (int i = 0; i < word.Length; i++)
         {
-            string colour = config.Style switch
+            char c = word[i];
+            bool lit = litIndex >= 0 && i >= litIndex && i < litIndex + config.StrobeLetters;
+
+            // A plain [color] tag for the lit letters, so the light reads as brightness rather
+            // than as another hue; everything else takes the chosen style's own tag.
+            string open, close;
+            if (lit)
             {
-                "rainbow" => rainbow[letter % rainbow.Length],
-                "gold" => "gold",
-                "slime" => "green",
-                _ => "",
-            };
+                open = $"[color=#{litHex}]";
+                close = "[/color]";
+            }
+            else
+            {
+                string colour = config.Style switch
+                {
+                    "rainbow" => rainbow[letter % rainbow.Length],
+                    "gold" => "gold",
+                    "slime" => "green",
+                    _ => "",
+                };
+
+                open = colour.Length > 0 ? $"[{colour}]" : "";
+                close = colour.Length > 0 ? $"[/{colour}]" : "";
+            }
 
             if (char.IsLetter(c))
             {
                 letter++;
             }
 
-            string open = (colour.Length > 0 ? $"[{colour}]" : "") + (motion.Length > 0 ? $"[{motion}]" : "");
-            string close = (motion.Length > 0 ? $"[/{motion}]" : "") + (colour.Length > 0 ? $"[/{colour}]" : "");
+            if (motion.Length > 0)
+            {
+                open += $"[{motion}]";
+                close = $"[/{motion}]" + close;
+            }
+
             built.Append(open).Append(c).Append(close);
         }
 
