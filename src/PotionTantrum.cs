@@ -121,11 +121,16 @@ internal static class PotionTantrum
             Log.Info($"[ThrowYourPotions] Sound check — {Diagnostics()}");
         }
 
+        // Waves, not a queue. The sound engine refuses a second instance of a voice event while
+        // the first is still going, so firing twenty noises 0.08s apart would play the first few
+        // and drop the rest — which is exactly what it did. Instead: every distinct noise at once,
+        // then the whole set again once they have finished.
         IReadOnlyList<string> events = config.SoundEvents(fakeMerchant);
         for (int i = 0; i < config.Sounds; i++)
         {
             string sfx = events[i % events.Count];
-            ScheduleOnce(tree, i * config.Gap, () => Play(sfx, config.Volume));
+            double at = ((i / events.Count) * config.Wave) + ((i % events.Count) * config.Gap);
+            ScheduleOnce(tree, at, () => Play(sfx, config.Volume));
         }
     }
 

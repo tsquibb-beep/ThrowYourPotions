@@ -17,7 +17,7 @@
     "outlineSize": 24,
 
     // How long the text sits there before fading out, in seconds.
-    "holdSeconds": 1.4,
+    "holdSeconds": 2.4,
 
     // Rumble the screen for as long as the text is up, like the merchant room
     // does when you actually throw a potion at him.
@@ -30,10 +30,14 @@
     // rAnDoM cAsE, re-rolled every time so it never looks the same twice.
     "wackyCase": true,
 
-    // The racket. soundCount is how many of his noises play; soundGapSeconds is
-    // the gap between them, small enough that they pile up on top of each other.
+    // The racket. The sound engine will not play one of his voice lines on top of
+    // itself, so the noises come in waves: every noise he has at once (a fraction
+    // of a second apart), then the whole lot again once they have finished.
+    // soundCount is the total number played; soundGapSeconds spaces them within a
+    // wave; soundWaveSeconds is how long until the same noise can be used again.
     "soundCount": 20,
-    "soundGapSeconds": 0.12,
+    "soundGapSeconds": 0.08,
+    "soundWaveSeconds": 1.3,
     "soundVolume": 1.0,
 
     // "mix" cycles everything he has: the thank you, the welcome, the idle

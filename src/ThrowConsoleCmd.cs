@@ -15,7 +15,7 @@ public class ThrowConsoleCmd : AbstractConsoleCmd
 {
     public override string CmdName => "tyt";
 
-    public override string Args => "[all|text|sound|diag]";
+    public override string Args => "[all|text|sound|diag|vfx <path>]";
 
     public override string Description => "Throw Your Potions: fire the alert here and now.";
 
@@ -40,12 +40,25 @@ public class ThrowConsoleCmd : AbstractConsoleCmd
                 PotionTantrum.FireSounds(config, fakeMerchant: false);
                 return new CmdResult(success: true, $"Playing {config.Sounds} merchant noise(s) ({config.SoundSet}).");
 
+            case "vfx":
+            {
+                string path = args.Length > 1 ? args[1] : MegaCrit.Sts2.Core.Commands.VfxCmd.coinExplosionJumboPath;
+                Godot.Control? container = MegaCrit.Sts2.Core.Nodes.NRun.Instance?.GlobalUi?.AboveTopBarVfxContainer;
+                if (container == null)
+                {
+                    return new CmdResult(success: false, "No run UI to spawn into.");
+                }
+
+                ThrowBanner.ShowVfx(container, path);
+                return new CmdResult(success: true, $"Spawned '{path}' centre screen — see the log for where it landed.");
+            }
+
             case "all":
                 PotionTantrum.FireNow(config, fakeMerchant: false);
                 return new CmdResult(success: true, "Throwing a tantrum.");
 
             default:
-                return new CmdResult(success: false, $"Unknown mode '{mode}'. Use: all, text, sound, diag.");
+                return new CmdResult(success: false, $"Unknown mode '{mode}'. Use: all, text, sound, diag, vfx.");
         }
     }
 
@@ -53,7 +66,7 @@ public class ThrowConsoleCmd : AbstractConsoleCmd
     {
         if (args.Length <= 1)
         {
-            return CompleteArgument(new[] { "all", "text", "sound", "diag" }, System.Array.Empty<string>(), args.FirstOrDefault() ?? "");
+            return CompleteArgument(new[] { "all", "text", "sound", "diag", "vfx" }, System.Array.Empty<string>(), args.FirstOrDefault() ?? "");
         }
 
         return new CompletionResult { Type = CompletionType.Argument, ArgumentContext = CmdName };

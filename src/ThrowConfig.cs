@@ -41,7 +41,7 @@ internal sealed class ThrowConfig
 
     /// <summary>How long the text sits there before it fades out.</summary>
     [JsonPropertyName("holdSeconds")]
-    public float HoldSeconds { get; set; } = 1.4f;
+    public float HoldSeconds { get; set; } = 2.4f;
 
     [JsonPropertyName("screenShake")]
     public bool ScreenShake { get; set; } = true;
@@ -58,9 +58,17 @@ internal sealed class ThrowConfig
     [JsonPropertyName("soundCount")]
     public int SoundCount { get; set; } = 20;
 
-    /// <summary>Gap between noises. Small enough that they pile on top of each other.</summary>
+    /// <summary>Gap between the noises within one wave, so they pile on top of each other.</summary>
     [JsonPropertyName("soundGapSeconds")]
-    public float SoundGapSeconds { get; set; } = 0.12f;
+    public float SoundGapSeconds { get; set; } = 0.08f;
+
+    /// <summary>
+    /// How long before the same noise can be used again. The sound engine will not play a voice
+    /// line over itself, so repeats inside this window are silently dropped — hence waves: every
+    /// noise he has, all at once, then the whole lot again.
+    /// </summary>
+    [JsonPropertyName("soundWaveSeconds")]
+    public float SoundWaveSeconds { get; set; } = 1.3f;
 
     [JsonPropertyName("soundVolume")]
     public float SoundVolume { get; set; } = 1.0f;
@@ -94,6 +102,8 @@ internal sealed class ThrowConfig
 
     public float Hold => Math.Clamp(HoldSeconds, 0f, 10f);
 
+    public float Wave => Math.Clamp(SoundWaveSeconds, 0.2f, 5f);
+
     public int Size => Math.Clamp(FontSize, 8, 400);
 
     public int Outline => Math.Clamp(OutlineSize, 0, 64);
@@ -112,14 +122,19 @@ internal sealed class ThrowConfig
     {
         if (!MixSounds)
         {
-            return fakeMerchant
-                ? new[] { FmodSfx.fakeMerchantLaugh, FmodSfx.merchantThankYou }
-                : new[] { FmodSfx.merchantThankYou };
+            return new[] { fakeMerchant ? FmodSfx.fakeMerchantLaugh : FmodSfx.merchantThankYou };
         }
 
-        return fakeMerchant
-            ? new[] { FmodSfx.fakeMerchantLaugh, FmodSfx.merchantThankYou, FmodSfx.merchantWelcome, FmodSfx.merchantPassive, FmodSfx.merchantDisappointment }
-            : new[] { FmodSfx.merchantThankYou, FmodSfx.merchantWelcome, FmodSfx.merchantPassive, FmodSfx.merchantDisappointment };
+        // Every noise he has. The laugh belongs to the fake merchant but is funny anywhere, and a
+        // fifth distinct event means a fifth voice that can sound at the same time as the others.
+        return new[]
+        {
+            FmodSfx.merchantThankYou,
+            FmodSfx.merchantWelcome,
+            FmodSfx.merchantPassive,
+            FmodSfx.merchantDisappointment,
+            FmodSfx.fakeMerchantLaugh,
+        };
     }
 
     private static Color ParseColor(string value, string fallback)

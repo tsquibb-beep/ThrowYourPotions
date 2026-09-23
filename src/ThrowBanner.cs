@@ -3,6 +3,7 @@ using Godot;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes.Vfx.Utilities;
 using MegaCrit.Sts2.addons.mega_text;
@@ -36,8 +37,6 @@ internal static class ThrowBanner
     private static readonly Random _random = new();
 
     private static bool _loggedFirstBanner;
-
-    private static bool _loggedFirstCoins;
 
     public static void Show(ThrowConfig config)
     {
@@ -155,13 +154,23 @@ internal static class ThrowBanner
     /// A jumbo burst of gold coins, centre screen — he pays 100 gold for a thrown Foul Potion,
     /// so the money is the point. Spawned the way the game spawns its own non-combat VFX.
     /// </summary>
-    private static void ShowCoins(Control container)
+    private static void ShowCoins(Control container) => ShowVfx(container, VfxCmd.coinExplosionJumboPath);
+
+    /// <summary>
+    /// Drops a VFX scene centre screen.
+    ///
+    /// Parented to the merchant room rather than the UI container: that is where the game puts its
+    /// own merchant-room effect (FoulPotion's slime splat), and world-space particle scenes do not
+    /// necessarily render as a child of a UI Control.
+    /// </summary>
+    public static void ShowVfx(Control container, string vfxPath)
     {
         try
         {
             Rect2 viewport = container.GetViewportRect();
             Vector2 centre = viewport.Position + (viewport.Size / 2f);
-            Node2D? coins = VfxCmd.PlayNonCombatVfx(container, centre, VfxCmd.coinExplosionJumboPath);
+            Node parent = (Node?)NMerchantRoom.Instance ?? container;
+            Node2D? coins = VfxCmd.PlayNonCombatVfx(parent, centre, vfxPath);
             if (coins == null)
             {
                 return;
@@ -179,12 +188,9 @@ internal static class ThrowBanner
 
                 coins.GlobalPosition = centre;
 
-                if (!_loggedFirstCoins)
-                {
-                    _loggedFirstCoins = true;
-                    Log.Info($"[ThrowYourPotions] Coins: at={coins.GlobalPosition}, wanted={centre}, "
-                        + $"visible={coins.Visible}, scale={coins.Scale}, parent={coins.GetParent()?.Name}.");
-                }
+                Log.Info($"[ThrowYourPotions] Vfx '{vfxPath}': at={coins.GlobalPosition}, wanted={centre}, "
+                    + $"visible={coins.Visible}, scale={coins.Scale}, zIndex={coins.ZIndex}, "
+                    + $"parent={coins.GetParent()?.Name}, children={coins.GetChildCount()}.");
             }).CallDeferred();
 
             // Particle scenes usually free themselves when they finish, but not every one does,
@@ -201,7 +207,7 @@ internal static class ThrowBanner
         }
         catch (Exception ex)
         {
-            Log.Warn($"[ThrowYourPotions] Coin explosion failed: {ex.Message}");
+            Log.Warn($"[ThrowYourPotions] Vfx '{vfxPath}' failed: {ex.Message}");
         }
     }
 
