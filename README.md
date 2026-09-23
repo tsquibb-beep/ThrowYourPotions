@@ -6,8 +6,9 @@ The Foul Potion has exactly one use outside combat: throw it at the merchant for
 very easy to walk into a shop, buy your cards, leave, and only then remember you were carrying one.
 
 So this mod shouts at you. Walk into a merchant holding one or more Foul Potions and
-**THROW YOUR POTIONS** spins onto the middle of the screen, the screen kicks, and the merchant's
-purchase noise plays ten times on top of itself until you get the message.
+**THROW YOUR POTIONS!!** slams onto the screen a word at a time, crooked, shaking, rocking,
+breathing, with a light chasing through the letters and slime splattering around it, while the
+screen rumbles and the merchant gibbers over himself with his coins jingling.
 
 It also fires at the Fake Merchant, because the potion works on him too.
 
@@ -28,21 +29,21 @@ that copy is read in preference to the one in the mod folder.
 |---|---|---|
 | `enabled` | `true` | Master switch. |
 | `showText` | `true` | The big text. Off gives you noise only. |
-| `text` | `"THROW YOUR POTIONS"` | Say something else if you like. |
+| `text` | `"THROW YOUR POTIONS!!"` | Say something else if you like. Each word becomes its own line. |
 | `fontSize`, `textColor`, `outlineColor`, `outlineSize` | 140, cream, near-black, 24 | How the text looks. `textColor` applies to the `plain` style only. |
 | `textStyle` | `"gold"` | `"gold"`, `"slime"` (Foul Potion green), `"rainbow"` (every letter a different colour), or `"plain"`. |
-| `wordStepSeconds`, `wordTiltDegrees` | 0.2, 6 | The words land one at a time, stacked and crooked. |
+| `wordStepSeconds`, `wordTiltDegrees` | 0.15, 6 | The words land one at a time, stacked and crooked. |
 | `strobe`, `strobeSeconds`, `strobeWidth`, `strobeColor` | true, 0.055, 2, white | A light chasing through the letters. |
 | `sizeJitter`, `sizeJitterAmount`, `sizeJitterSeconds` | true, 0.06, 0.32 | Each word breathing in and out of size. |
 | `rock`, `rockDegrees`, `rockSeconds` | true, 3, 0.55 | Each word rocking back and forth. |
 | `textMotion` | `"jitter"` | `"jitter"` shakes the letters, `"sine"` bobs them, `"none"` holds still. |
 | `flash`, `flashColor` | true, slime green | A full-screen colour wash as the text lands. |
-| `holdSeconds` | `1.4` | How long it stays before fading. |
+| `holdSeconds` | `1.1` | How long it stays before fading. |
 | `screenShake` | `true` | Rumbles the screen for as long as the text is up. |
 | `splats`, `splatCount`, `splatScaleMin`, `splatScaleMax` | true, 14, 1.4, 3.2 | Slime splats going off around the text. |
 | `wackyCase` | `true` | rAnDoM cAsE, re-rolled every time. |
-| `soundCount` | `10` | How many merchant noises. This is the point of the mod. |
-| `soundGapSeconds` | `0.12` | Gap between them. Small, so they overlap. |
+| `soundCount` | `20` | How many noises. Capped to what fits while the text is up. |
+| `soundGapSeconds` | `0.08` | Gap between the noises within one wave, so they pile up. |
 | `soundVolume` | `1.0` | Quieter, if you are a coward. |
 | `soundSet` | `"mix"` | `"buy"` is his purchase noise alone; `"mix"` cycles every noise he has, which is denser. |
 | `moneySounds` | `true` | Mixes the game's gold sounds in with his noises. |
@@ -56,6 +57,11 @@ Values are clamped, so a daft number tones the mod down rather than breaking any
 - Loading a save made while standing in a shop sets it off again. That is deliberate: you have just
   arrived, and you have probably forgotten again.
 - In co-op it only shouts at whoever is actually carrying a Foul Potion.
+- The noises come in waves rather than one long stream. The sound engine will not play a voice line
+  on top of itself, so a wave is every distinct noise at once, then the whole set again once they
+  have finished. That is why `"mix"` sounds fuller than `"buy"`.
+- Your settings are never overwritten by an update, and any setting missing from your file simply
+  uses its default, so new ones can be added without touching what you have tuned.
 
 ## Building from source
 
