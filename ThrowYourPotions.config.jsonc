@@ -32,15 +32,16 @@
 
     // The racket. soundCount is how many of his noises play; soundGapSeconds is
     // the gap between them, small enough that they pile up on top of each other.
-    "soundCount": 10,
+    "soundCount": 20,
     "soundGapSeconds": 0.12,
     "soundVolume": 1.0,
 
-    // "buy" repeats the noise he makes when you buy a card. The game varies it
-    // for you, so it is not the same sound ten times.
     // "mix" cycles everything he has: the thank you, the welcome, the idle
     // mumble and the disappointed grunt. At the Fake Merchant, both add his laugh.
-    "soundSet": "buy",
+    // "buy" repeats only his purchase noise — but the sound engine refuses to
+    // play a voice line over itself, so "buy" ends up almost silent. Mix is the
+    // default for that reason.
+    "soundSet": "mix",
 
     // How long to wait after arriving before going off. Room entry happens behind
     // a fade to black, so firing immediately would play under it.

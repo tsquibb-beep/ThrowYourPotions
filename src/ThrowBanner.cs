@@ -37,6 +37,8 @@ internal static class ThrowBanner
 
     private static bool _loggedFirstBanner;
 
+    private static bool _loggedFirstCoins;
+
     public static void Show(ThrowConfig config)
     {
         Control? container = NRun.Instance?.GlobalUi?.AboveTopBarVfxContainer;
@@ -158,11 +160,32 @@ internal static class ThrowBanner
         try
         {
             Rect2 viewport = container.GetViewportRect();
-            Node2D? coins = VfxCmd.PlayNonCombatVfx(container, viewport.Position + (viewport.Size / 2f), VfxCmd.coinExplosionJumboPath);
+            Vector2 centre = viewport.Position + (viewport.Size / 2f);
+            Node2D? coins = VfxCmd.PlayNonCombatVfx(container, centre, VfxCmd.coinExplosionJumboPath);
             if (coins == null)
             {
                 return;
             }
+
+            // AddChildSafely may defer to the next idle frame, and a GlobalPosition written before
+            // the node is in the tree is measured against nothing — the burst then lands wherever
+            // the container's own transform puts it, usually off screen. Place it once it is in.
+            Callable.From(() =>
+            {
+                if (!GodotObject.IsInstanceValid(coins) || !coins.IsInsideTree())
+                {
+                    return;
+                }
+
+                coins.GlobalPosition = centre;
+
+                if (!_loggedFirstCoins)
+                {
+                    _loggedFirstCoins = true;
+                    Log.Info($"[ThrowYourPotions] Coins: at={coins.GlobalPosition}, wanted={centre}, "
+                        + $"visible={coins.Visible}, scale={coins.Scale}, parent={coins.GetParent()?.Name}.");
+                }
+            }).CallDeferred();
 
             // Particle scenes usually free themselves when they finish, but not every one does,
             // so put a backstop on it rather than leaving a node parked on the run's UI.

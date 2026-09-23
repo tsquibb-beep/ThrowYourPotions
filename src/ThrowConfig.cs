@@ -56,7 +56,7 @@ internal sealed class ThrowConfig
 
     /// <summary>How many merchant noises to play. Ten is the point of the mod.</summary>
     [JsonPropertyName("soundCount")]
-    public int SoundCount { get; set; } = 10;
+    public int SoundCount { get; set; } = 20;
 
     /// <summary>Gap between noises. Small enough that they pile on top of each other.</summary>
     [JsonPropertyName("soundGapSeconds")]
@@ -65,9 +65,12 @@ internal sealed class ThrowConfig
     [JsonPropertyName("soundVolume")]
     public float SoundVolume { get; set; } = 1.0f;
 
-    /// <summary>"buy" repeats his purchase noise; "mix" cycles every noise he has.</summary>
+    /// <summary>
+    /// "mix" cycles every noise he has, and is the default because FMOD refuses to stack repeated
+    /// instances of the same voice event — "buy" on its own plays once and swallows the other nine.
+    /// </summary>
     [JsonPropertyName("soundSet")]
-    public string SoundSet { get; set; } = "buy";
+    public string SoundSet { get; set; } = "mix";
 
     /// <summary>
     /// Wait this long after arriving before going off. Room entry happens behind a fade to black
@@ -102,8 +105,8 @@ internal sealed class ThrowConfig
     public bool MixSounds => string.Equals(SoundSet?.Trim(), "mix", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// The noises, in the order they are played. "buy" is his purchase vocalisation, which is a
-    /// random-variation event in FMOD, so repeating it still gives a different noise each time.
+    /// The noises, in the order they are played. Cycling different events matters: FMOD will not
+    /// play a second instance of the same voice event over itself, so "buy" alone is nearly silent.
     /// </summary>
     public IReadOnlyList<string> SoundEvents(bool fakeMerchant)
     {
