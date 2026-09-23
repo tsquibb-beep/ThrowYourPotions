@@ -46,6 +46,10 @@ internal sealed class ThrowConfig
     [JsonPropertyName("screenShake")]
     public bool ScreenShake { get; set; } = true;
 
+    /// <summary>Burst of gold coins behind the text — he pays you 100 gold for the throw.</summary>
+    [JsonPropertyName("coinExplosion")]
+    public bool CoinExplosion { get; set; } = true;
+
     /// <summary>Random upper/lower case, re-rolled every time, so it never looks the same twice.</summary>
     [JsonPropertyName("wackyCase")]
     public bool WackyCase { get; set; } = true;

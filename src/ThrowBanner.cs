@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Helpers;
@@ -29,6 +30,9 @@ internal static class ThrowBanner
     /// <summary>Shake is re-kicked this often so it runs for as long as the text is up.</summary>
     private const double ShakeTickSeconds = 0.18;
 
+    /// <summary>Backstop for freeing the coin burst if its own particles never report finished.</summary>
+    private const double CoinCleanupSeconds = 8.0;
+
     private static readonly Random _random = new();
 
     private static bool _loggedFirstBanner;
@@ -45,6 +49,12 @@ internal static class ThrowBanner
 
         // Two banners can never stack, however fast the rooms change.
         container.GetNodeOrNull<Label>(NodeName)?.QueueFreeSafely();
+
+        // Coins first, so they burst behind the text rather than over it.
+        if (config.CoinExplosion)
+        {
+            ShowCoins(container);
+        }
 
         var label = new Label
         {
@@ -137,6 +147,39 @@ internal static class ThrowBanner
 
         tween.Chain();
         tween.TweenCallback(Callable.From(() => label.QueueFreeSafely()));
+    }
+
+    /// <summary>
+    /// A jumbo burst of gold coins, centre screen — he pays 100 gold for a thrown Foul Potion,
+    /// so the money is the point. Spawned the way the game spawns its own non-combat VFX.
+    /// </summary>
+    private static void ShowCoins(Control container)
+    {
+        try
+        {
+            Rect2 viewport = container.GetViewportRect();
+            Node2D? coins = VfxCmd.PlayNonCombatVfx(container, viewport.Position + (viewport.Size / 2f), VfxCmd.coinExplosionJumboPath);
+            if (coins == null)
+            {
+                return;
+            }
+
+            // Particle scenes usually free themselves when they finish, but not every one does,
+            // so put a backstop on it rather than leaving a node parked on the run's UI.
+            container.GetTree()
+                .CreateTimer(CoinCleanupSeconds, processAlways: true, processInPhysics: false, ignoreTimeScale: true)
+                .Timeout += () =>
+                {
+                    if (GodotObject.IsInstanceValid(coins))
+                    {
+                        coins.QueueFreeSafely();
+                    }
+                };
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"[ThrowYourPotions] Coin explosion failed: {ex.Message}");
+        }
     }
 
     /// <summary>

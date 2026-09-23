@@ -31,7 +31,9 @@ that copy is read in preference to the one in the mod folder.
 | `text` | `"THROW YOUR POTIONS"` | Say something else if you like. |
 | `fontSize`, `textColor`, `outlineColor`, `outlineSize` | 140, cream, near-black, 24 | How the text looks. |
 | `holdSeconds` | `1.4` | How long it stays before fading. |
-| `screenShake` | `true` | Kicks the screen as the text lands. |
+| `screenShake` | `true` | Rumbles the screen for as long as the text is up. |
+| `coinExplosion` | `true` | A burst of gold coins behind the text. |
+| `wackyCase` | `true` | rAnDoM cAsE, re-rolled every time. |
 | `soundCount` | `10` | How many merchant noises. This is the point of the mod. |
 | `soundGapSeconds` | `0.12` | Gap between them. Small, so they overlap. |
 | `soundVolume` | `1.0` | Quieter, if you are a coward. |
