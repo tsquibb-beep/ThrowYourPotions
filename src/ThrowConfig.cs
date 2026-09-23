@@ -61,6 +61,24 @@ internal sealed class ThrowConfig
     [JsonPropertyName("splatScaleMax")]
     public float SplatScaleMax { get; set; } = 3.2f;
 
+    /// <summary>
+    /// "rainbow" gives every letter its own colour, "gold" the game's gold treatment, "slime"
+    /// Foul Potion green, "plain" a single flat colour with no per-letter effects.
+    /// </summary>
+    [JsonPropertyName("textStyle")]
+    public string TextStyle { get; set; } = "rainbow";
+
+    /// <summary>Per-letter motion: "jitter" shakes, "sine" bobs, "none" holds still.</summary>
+    [JsonPropertyName("textMotion")]
+    public string TextMotion { get; set; } = "jitter";
+
+    /// <summary>Full-screen colour wash as the text lands.</summary>
+    [JsonPropertyName("flash")]
+    public bool Flash { get; set; } = true;
+
+    [JsonPropertyName("flashColor")]
+    public string FlashColorHex { get; set; } = "#4fd14f";
+
     /// <summary>Random upper/lower case, re-rolled every time, so it never looks the same twice.</summary>
     [JsonPropertyName("wackyCase")]
     public bool WackyCase { get; set; } = true;
@@ -129,6 +147,12 @@ internal sealed class ThrowConfig
     public Color TextColor => ParseColor(TextColorHex, "#fff1c9");
 
     public Color OutlineColor => ParseColor(OutlineColorHex, "#1a0f06");
+
+    public Color FlashColor => ParseColor(FlashColorHex, "#4fd14f");
+
+    public string Style => (TextStyle ?? "rainbow").Trim().ToLowerInvariant();
+
+    public string Motion => (TextMotion ?? "jitter").Trim().ToLowerInvariant();
 
     public bool MixSounds => string.Equals(SoundSet?.Trim(), "mix", StringComparison.OrdinalIgnoreCase);
 

@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.Core.Nodes.Vfx.Utilities;
 using MegaCrit.Sts2.addons.mega_text;
 
@@ -52,7 +53,7 @@ internal static class ThrowBanner
         }
 
         // Two banners can never stack, however fast the rooms change.
-        container.GetNodeOrNull<Label>(NodeName)?.QueueFreeSafely();
+        container.GetNodeOrNull<Control>(NodeName)?.QueueFreeSafely();
 
         // Splats first, so they land behind the text rather than over it.
         if (config.Splats)
@@ -60,28 +61,14 @@ internal static class ThrowBanner
             SplatStorm(container, config);
         }
 
-        var label = new Label
+        if (config.Flash)
         {
-            Name = NodeName,
-            Text = config.WackyCase ? WackyCase(config.Text) : config.Text,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            AutowrapMode = TextServer.AutowrapMode.Off,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            ZIndex = 100,
-            Modulate = new Color(1f, 1f, 1f, 0f),
-        };
-
-        Font? font = container.GetThemeFont(ThemeConstants.Label.Font, "Label");
-        if (font != null)
-        {
-            label.AddThemeFontOverride(ThemeConstants.Label.Font, font);
+            ShowFlash(container, config);
         }
 
-        label.AddThemeFontSizeOverride(ThemeConstants.Label.FontSize, config.Size);
-        label.AddThemeColorOverride(ThemeConstants.Label.FontColor, config.TextColor);
-        label.AddThemeColorOverride(ThemeConstants.Label.FontOutlineColor, config.OutlineColor);
-        label.AddThemeConstantOverride(ThemeConstants.Label.OutlineSize, config.Outline);
+        string words = config.WackyCase ? WackyCase(config.Text) : config.Text;
+        Font? font = container.GetThemeFont(ThemeConstants.Label.Font, "Label");
+        Control label = BuildRichLabel(container, words, font, config) ?? BuildPlainLabel(words, font, config);
 
         container.AddChildSafely(label);
 
@@ -90,7 +77,7 @@ internal static class ThrowBanner
         Callable.From(() => Animate(label, font, config)).CallDeferred();
     }
 
-    private static void Animate(Label label, Font? font, ThrowConfig config)
+    private static void Animate(Control label, Font? font, ThrowConfig config)
     {
         if (!GodotObject.IsInstanceValid(label) || !label.IsInsideTree())
         {
@@ -100,8 +87,21 @@ internal static class ThrowBanner
         // Explicit size and position: SetAnchorsPreset only adjusts offsets to preserve the
         // control's current rect, which on a fresh node is 0x0, so it would render nothing.
         Rect2 viewport = label.GetViewportRect();
-        label.Size = viewport.Size;
-        label.GlobalPosition = viewport.Position;
+
+        if (label is RichTextLabel)
+        {
+            // A RichTextLabel lays its text out from the top of its rect and has no vertical
+            // alignment, so give it a band the height of one line and centre the band instead.
+            float band = config.Size * 1.6f;
+            label.Size = new Vector2(viewport.Size.X, band);
+            label.GlobalPosition = new Vector2(viewport.Position.X, viewport.Position.Y + ((viewport.Size.Y - band) / 2f));
+        }
+        else
+        {
+            label.Size = viewport.Size;
+            label.GlobalPosition = viewport.Position;
+        }
+
         label.PivotOffset = label.Size / 2f;
 
         // Godot 4 has no tweenable "rotation_degrees" property; set degrees, tween radians.
@@ -151,6 +151,141 @@ internal static class ThrowBanner
 
         tween.Chain();
         tween.TweenCallback(Callable.From(() => label.QueueFreeSafely()));
+    }
+
+    /// <summary>
+    /// The game's own rich label, which gives us its per-letter effects: colour tags plus
+    /// [jitter]/[sine]. It asserts a theme font override in _Ready and throws without one, so the
+    /// font goes on before it ever enters the tree. Returns null if anything about it misbehaves,
+    /// and the caller falls back to a stock Label.
+    /// </summary>
+    private static Control? BuildRichLabel(Control container, string words, Font? font, ThrowConfig config)
+    {
+        if (config.Style == "plain")
+        {
+            return null;
+        }
+
+        try
+        {
+            Font? richFont = container.GetThemeFont(ThemeConstants.RichTextLabel.NormalFont, "RichTextLabel") ?? font;
+            if (richFont == null)
+            {
+                return null;
+            }
+
+            var label = new MegaRichTextLabel
+            {
+                Name = NodeName,
+                BbcodeEnabled = true,
+                AutoSizeEnabled = false,
+                FitContent = false,
+                ScrollActive = false,
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                ZIndex = 100,
+                Modulate = new Color(1f, 1f, 1f, 0f),
+            };
+
+            // Must be set before the node enters the tree, or _Ready throws.
+            label.AddThemeFontOverride(ThemeConstants.RichTextLabel.NormalFont, richFont);
+            label.AddThemeFontSizeOverride(ThemeConstants.RichTextLabel.NormalFontSize, config.Size);
+            label.AddThemeColorOverride(ThemeConstants.RichTextLabel.FontOutlineColor, config.OutlineColor);
+            label.AddThemeConstantOverride("outline_size", config.Outline);
+            label.Text = Markup(words, config);
+            return label;
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"[ThrowYourPotions] Rich text unavailable ({ex.Message}); falling back to plain text.");
+            return null;
+        }
+    }
+
+    private static Label BuildPlainLabel(string words, Font? font, ThrowConfig config)
+    {
+        var label = new Label
+        {
+            Name = NodeName,
+            Text = words,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            AutowrapMode = TextServer.AutowrapMode.Off,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            ZIndex = 100,
+            Modulate = new Color(1f, 1f, 1f, 0f),
+        };
+
+        if (font != null)
+        {
+            label.AddThemeFontOverride(ThemeConstants.Label.Font, font);
+        }
+
+        label.AddThemeFontSizeOverride(ThemeConstants.Label.FontSize, config.Size);
+        label.AddThemeColorOverride(ThemeConstants.Label.FontColor, config.TextColor);
+        label.AddThemeColorOverride(ThemeConstants.Label.FontOutlineColor, config.OutlineColor);
+        label.AddThemeConstantOverride(ThemeConstants.Label.OutlineSize, config.Outline);
+        return label;
+    }
+
+    /// <summary>
+    /// Wraps the words in the game's own BBCode effects. Each letter is tagged individually rather
+    /// than nesting one big [jitter] around coloured runs, so every character reliably picks up
+    /// both its colour and its motion.
+    /// </summary>
+    private static string Markup(string words, ThrowConfig config)
+    {
+        string[] rainbow = { "red", "orange", "gold", "green", "aqua", "blue", "purple", "pink" };
+        string motion = config.Motion is "jitter" or "sine" ? config.Motion : "";
+
+        var built = new System.Text.StringBuilder("[center]");
+        int letter = 0;
+
+        foreach (char c in words)
+        {
+            string colour = config.Style switch
+            {
+                "rainbow" => rainbow[letter % rainbow.Length],
+                "gold" => "gold",
+                "slime" => "green",
+                _ => "",
+            };
+
+            if (char.IsLetter(c))
+            {
+                letter++;
+            }
+
+            string open = (colour.Length > 0 ? $"[{colour}]" : "") + (motion.Length > 0 ? $"[{motion}]" : "");
+            string close = (motion.Length > 0 ? $"[/{motion}]" : "") + (colour.Length > 0 ? $"[/{colour}]" : "");
+            built.Append(open).Append(c == ' ' ? " " : c.ToString()).Append(close);
+        }
+
+        return built.Append("[/center]").ToString();
+    }
+
+    /// <summary>
+    /// The game's full-screen smoky vignette, as used for big AoE cards. It fades itself in and
+    /// out and frees itself, so there is nothing to clean up.
+    /// </summary>
+    private static void ShowFlash(Control container, ThrowConfig config)
+    {
+        try
+        {
+            Color tint = config.FlashColor;
+            tint.A = 0.45f;
+            Color highlight = config.FlashColor.Lightened(0.35f);
+            highlight.A = 0.33f;
+
+            NSmokyVignetteVfx? vignette = NSmokyVignetteVfx.Create(tint, highlight);
+            if (vignette != null)
+            {
+                container.AddChildSafely(vignette);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"[ThrowYourPotions] Flash failed: {ex.Message}");
+        }
     }
 
     /// <summary>

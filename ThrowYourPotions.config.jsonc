@@ -11,6 +11,17 @@
     // The big text. Set showText to false for noise only.
     "showText": true,
     "text": "THROW YOUR POTIONS",
+
+    // How the letters look and move, using the game's own text effects.
+    //   textStyle:  "rainbow" (every letter a different colour), "gold",
+    //               "slime" (Foul Potion green), or "plain" (one flat colour)
+    //   textMotion: "jitter" (shakes), "sine" (bobs), or "none"
+    "textStyle": "rainbow",
+    "textMotion": "jitter",
+
+    // Full-screen colour wash as the text lands. Fades out by itself.
+    "flash": true,
+    "flashColor": "#4fd14f",
     "fontSize": 140,
     "textColor": "#fff1c9",
     "outlineColor": "#1a0f06",

@@ -29,7 +29,10 @@ that copy is read in preference to the one in the mod folder.
 | `enabled` | `true` | Master switch. |
 | `showText` | `true` | The big text. Off gives you noise only. |
 | `text` | `"THROW YOUR POTIONS"` | Say something else if you like. |
-| `fontSize`, `textColor`, `outlineColor`, `outlineSize` | 140, cream, near-black, 24 | How the text looks. |
+| `fontSize`, `textColor`, `outlineColor`, `outlineSize` | 140, cream, near-black, 24 | How the text looks. `textColor` applies to the `plain` style only. |
+| `textStyle` | `"rainbow"` | `"rainbow"` gives every letter its own colour, or `"gold"`, `"slime"`, `"plain"`. |
+| `textMotion` | `"jitter"` | `"jitter"` shakes the letters, `"sine"` bobs them, `"none"` holds still. |
+| `flash`, `flashColor` | true, slime green | A full-screen colour wash as the text lands. |
 | `holdSeconds` | `1.4` | How long it stays before fading. |
 | `screenShake` | `true` | Rumbles the screen for as long as the text is up. |
 | `splats`, `splatCount`, `splatScaleMin`, `splatScaleMax` | true, 14, 1.4, 3.2 | Slime splats going off around the text. |
