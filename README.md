@@ -1,0 +1,60 @@
+# Throw Your Potions
+
+A joke mod for **Slay the Spire 2** that is also, annoyingly, useful.
+
+The Foul Potion has exactly one use outside combat: throw it at the merchant for 100 gold. It is
+very easy to walk into a shop, buy your cards, leave, and only then remember you were carrying one.
+
+So this mod shouts at you. Walk into a merchant holding one or more Foul Potions and
+**THROW YOUR POTIONS** spins onto the middle of the screen, the screen kicks, and the merchant's
+purchase noise plays ten times on top of itself until you get the message.
+
+It also fires at the Fake Merchant, because the potion works on him too.
+
+Purely cosmetic. It changes nothing about how the game plays, it just makes a scene.
+
+## Installation
+
+Install with Vortex, or copy the `ThrowYourPotions` folder into `Slay the Spire 2/mods/` so you end
+up with `mods/ThrowYourPotions/ThrowYourPotions.dll`.
+
+## Settings
+
+You do not need any. If you must, edit `ThrowYourPotions.config.jsonc` in the mod folder and restart
+the game. To keep your settings through mod updates, copy the file to `%APPDATA%\SlayTheSpire2\`;
+that copy is read in preference to the one in the mod folder.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Master switch. |
+| `showText` | `true` | The big text. Off gives you noise only. |
+| `text` | `"THROW YOUR POTIONS"` | Say something else if you like. |
+| `fontSize`, `textColor`, `outlineColor`, `outlineSize` | 140, cream, near-black, 24 | How the text looks. |
+| `holdSeconds` | `1.4` | How long it stays before fading. |
+| `screenShake` | `true` | Kicks the screen as the text lands. |
+| `soundCount` | `10` | How many merchant noises. This is the point of the mod. |
+| `soundGapSeconds` | `0.12` | Gap between them. Small, so they overlap. |
+| `soundVolume` | `1.0` | Quieter, if you are a coward. |
+| `soundSet` | `"buy"` | `"buy"` repeats his purchase noise (the game varies it itself). `"mix"` cycles every noise he has. |
+| `delaySeconds` | `0.6` | Wait after arriving, so it does not play under the room's fade-in. |
+
+Values are clamped, so a daft number tones the mod down rather than breaking anything.
+
+## Notes
+
+- Loading a save made while standing in a shop sets it off again. That is deliberate: you have just
+  arrived, and you have probably forgotten again.
+- In co-op it only shouts at whoever is actually carrying a Foul Potion.
+
+## Building from source
+
+Requires the .NET 9 SDK and a local install of the game.
+
+```bash
+./deploy.sh ["/path/to/Slay the Spire 2"]   # build and install into the game's mods folder
+./package.sh ["/path/to/Slay the Spire 2"]  # build a release ZIP into dist/
+```
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).

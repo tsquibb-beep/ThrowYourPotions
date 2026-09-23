@@ -1,0 +1,41 @@
+// Throw Your Potions — settings. Restart the game after editing.
+//
+// The defaults are the whole point of the mod. Everything here exists only so you can tone it
+// down if you must. Copy this file to your save folder to keep your settings through updates:
+//   %APPDATA%\SlayTheSpire2\ThrowYourPotions.config.jsonc
+// That copy is read in preference to this one.
+{
+    // Master switch.
+    "enabled": true,
+
+    // The big text. Set showText to false for noise only.
+    "showText": true,
+    "text": "THROW YOUR POTIONS",
+    "fontSize": 140,
+    "textColor": "#fff1c9",
+    "outlineColor": "#1a0f06",
+    "outlineSize": 24,
+
+    // How long the text sits there before fading out, in seconds.
+    "holdSeconds": 1.4,
+
+    // Kick the screen as the text lands, like the merchant room does when you
+    // actually throw a potion at him.
+    "screenShake": true,
+
+    // The racket. soundCount is how many of his noises play; soundGapSeconds is
+    // the gap between them, small enough that they pile up on top of each other.
+    "soundCount": 10,
+    "soundGapSeconds": 0.12,
+    "soundVolume": 1.0,
+
+    // "buy" repeats the noise he makes when you buy a card. The game varies it
+    // for you, so it is not the same sound ten times.
+    // "mix" cycles everything he has: the thank you, the welcome, the idle
+    // mumble and the disappointed grunt. At the Fake Merchant, both add his laugh.
+    "soundSet": "buy",
+
+    // How long to wait after arriving before going off. Room entry happens behind
+    // a fade to black, so firing immediately would play under it.
+    "delaySeconds": 0.6
+}
