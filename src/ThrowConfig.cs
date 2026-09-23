@@ -91,6 +91,13 @@ internal sealed class ThrowConfig
 
     public static ThrowConfig Current => _current ??= Load();
 
+    /// <summary>Re-reads the file, so numbers can be tuned without restarting the game.</summary>
+    public static ThrowConfig Reload()
+    {
+        _current = Load();
+        return _current;
+    }
+
     // Clamped accessors: a silly edit should tone the mod down, never wedge the game.
     public int Sounds => Math.Clamp(SoundCount, 0, 50);
 

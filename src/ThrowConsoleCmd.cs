@@ -15,7 +15,7 @@ public class ThrowConsoleCmd : AbstractConsoleCmd
 {
     public override string CmdName => "tyt";
 
-    public override string Args => "[all|text|sound|diag|vfx <path>]";
+    public override string Args => "[all|text|sound|diag|reload|vfx <path>]";
 
     public override string Description => "Throw Your Potions: fire the alert here and now.";
 
@@ -29,6 +29,14 @@ public class ThrowConsoleCmd : AbstractConsoleCmd
 
         switch (mode)
         {
+            case "reload":
+            {
+                ThrowConfig fresh = ThrowConfig.Reload();
+                return new CmdResult(success: true,
+                    $"Config reloaded: text={fresh.ShowText}, sounds={fresh.Sounds} in waves of {fresh.SoundEvents(false).Count} "
+                    + $"every {fresh.Wave:0.00}s, hold={fresh.Hold:0.00}s, coins={fresh.CoinExplosion}, wacky={fresh.WackyCase}.");
+            }
+
             case "diag":
                 return new CmdResult(success: true, PotionTantrum.Diagnostics());
 
@@ -58,7 +66,7 @@ public class ThrowConsoleCmd : AbstractConsoleCmd
                 return new CmdResult(success: true, "Throwing a tantrum.");
 
             default:
-                return new CmdResult(success: false, $"Unknown mode '{mode}'. Use: all, text, sound, diag, vfx.");
+                return new CmdResult(success: false, $"Unknown mode '{mode}'. Use: all, text, sound, diag, reload, vfx.");
         }
     }
 
@@ -66,7 +74,7 @@ public class ThrowConsoleCmd : AbstractConsoleCmd
     {
         if (args.Length <= 1)
         {
-            return CompleteArgument(new[] { "all", "text", "sound", "diag", "vfx" }, System.Array.Empty<string>(), args.FirstOrDefault() ?? "");
+            return CompleteArgument(new[] { "all", "text", "sound", "diag", "reload", "vfx" }, System.Array.Empty<string>(), args.FirstOrDefault() ?? "");
         }
 
         return new CompletionResult { Type = CompletionType.Argument, ArgumentContext = CmdName };

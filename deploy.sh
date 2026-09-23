@@ -20,7 +20,13 @@ TARGET="$GAME_DIR/mods/$MOD_ID"
 "$DOTNET" build "$PROJECT_DIR/ThrowYourPotions.csproj" -c Release -p:Sts2Dir="$GAME_DIR"
 
 mkdir -p "$TARGET"
-cp "$PROJECT_DIR/bin/Release/net9.0/$MOD_ID.dll" "$TARGET/"
+
+# Windows keeps the DLL locked while the game is running, so the copy fails and you end up
+# testing the previous build without noticing. Say so plainly.
+if ! cp "$PROJECT_DIR/bin/Release/net9.0/$MOD_ID.dll" "$TARGET/" 2>/dev/null; then
+    echo "error: could not replace $MOD_ID.dll - close Slay the Spire 2 first (it locks the file while running)." >&2
+    exit 1
+fi
 cp "$PROJECT_DIR/$MOD_ID.json" "$TARGET/"
 
 # Never clobber a config the player has already tuned.
