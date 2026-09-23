@@ -55,6 +55,18 @@ internal sealed class ThrowConfig
     [JsonPropertyName("sizeJitterSeconds")]
     public float SizeJitterSeconds { get; set; } = 0.32f;
 
+    /// <summary>Each word rocking back and forth around its crooked angle.</summary>
+    [JsonPropertyName("rock")]
+    public bool Rock { get; set; } = true;
+
+    /// <summary>How far it rocks either way, in degrees.</summary>
+    [JsonPropertyName("rockDegrees")]
+    public float RockDegrees { get; set; } = 3f;
+
+    /// <summary>Seconds for one rock back and forth. Each word gets its own speed around this.</summary>
+    [JsonPropertyName("rockSeconds")]
+    public float RockSeconds { get; set; } = 0.55f;
+
     [JsonPropertyName("fontSize")]
     public int FontSize { get; set; } = 140;
 
@@ -211,6 +223,10 @@ internal sealed class ThrowConfig
     public float JitterAmount => Math.Clamp(SizeJitterAmount, 0f, 0.5f);
 
     public float JitterSeconds => Math.Clamp(SizeJitterSeconds, 0.05f, 3f);
+
+    public float RockAmount => Math.Clamp(RockDegrees, 0f, 30f);
+
+    public float RockPeriod => Math.Clamp(RockSeconds, 0.05f, 3f);
 
     public bool MixSounds => string.Equals(SoundSet?.Trim(), "mix", StringComparison.OrdinalIgnoreCase);
 

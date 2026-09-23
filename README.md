@@ -34,6 +34,7 @@ that copy is read in preference to the one in the mod folder.
 | `wordStepSeconds`, `wordTiltDegrees` | 0.2, 6 | The words land one at a time, stacked and crooked. |
 | `strobe`, `strobeSeconds`, `strobeWidth`, `strobeColor` | true, 0.055, 2, white | A light chasing through the letters. |
 | `sizeJitter`, `sizeJitterAmount`, `sizeJitterSeconds` | true, 0.06, 0.32 | Each word breathing in and out of size. |
+| `rock`, `rockDegrees`, `rockSeconds` | true, 3, 0.55 | Each word rocking back and forth. |
 | `textMotion` | `"jitter"` | `"jitter"` shakes the letters, `"sine"` bobs them, `"none"` holds still. |
 | `flash`, `flashColor` | true, slime green | A full-screen colour wash as the text lands. |
 | `holdSeconds` | `1.4` | How long it stays before fading. |

@@ -29,9 +29,12 @@ if ! cp "$PROJECT_DIR/bin/Release/net9.0/$MOD_ID.dll" "$TARGET/" 2>/dev/null; th
 fi
 cp "$PROJECT_DIR/$MOD_ID.json" "$TARGET/"
 
-# Never clobber a config the player has already tuned.
+# Never clobber a config that has already been tuned. New settings do not need to be added
+# here by hand: any key missing from the file falls back to the code's default.
 if [[ ! -f "$TARGET/$MOD_ID.config.jsonc" ]]; then
     cp "$PROJECT_DIR/$MOD_ID.config.jsonc" "$TARGET/"
+else
+    echo "Kept the existing $MOD_ID.config.jsonc (new settings fall back to their defaults)."
 fi
 
 echo "Installed $MOD_ID to $TARGET"

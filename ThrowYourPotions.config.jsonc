@@ -26,6 +26,11 @@
     "strobeWidth": 2,
     "strobeColor": "#ffffff",
 
+    // Each word rocking back and forth around the angle it landed at.
+    "rock": true,
+    "rockDegrees": 3,
+    "rockSeconds": 0.55,
+
     // Each word breathing in and out of size, each at its own speed.
     "sizeJitter": true,
     "sizeJitterAmount": 0.06,

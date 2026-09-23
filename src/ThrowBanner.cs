@@ -281,6 +281,12 @@ internal static class ThrowBanner
                 .SetDelay(delay + SlamSeconds);
         }
 
+        if (config.RockAmount > 0f && config.Rock)
+        {
+            tween.TweenCallback(Callable.From(() => StartRock(word, config)))
+                .SetDelay(delay + SlamSeconds);
+        }
+
         if (!last)
         {
             return;
@@ -336,6 +342,33 @@ internal static class ThrowBanner
             .SetEase(Tween.EaseType.InOut).SetTrans(Tween.TransitionType.Sine);
 
         _loops.Add(pulse);
+    }
+
+    /// <summary>
+    /// A word rocking back and forth around the crooked angle it landed at, so the stack is never
+    /// quite still. Like the size pulse, each word is given its own period so they drift out of
+    /// step with each other rather than swinging as one block.
+    /// </summary>
+    private static void StartRock(Control word, ThrowConfig config)
+    {
+        if (!GodotObject.IsInstanceValid(word) || !word.IsInsideTree())
+        {
+            return;
+        }
+
+        // Godot 4 has no tweenable "rotation_degrees", so the swing is done in radians around
+        // whatever tilt this word was built with.
+        float centre = word.Rotation;
+        float swing = Mathf.DegToRad(config.RockAmount);
+        double period = config.RockPeriod * (0.75 + (_random.NextDouble() * 0.5));
+
+        Tween rock = word.CreateTween().SetLoops();
+        rock.TweenProperty(word, "rotation", centre + swing, period / 2f)
+            .SetEase(Tween.EaseType.InOut).SetTrans(Tween.TransitionType.Sine);
+        rock.TweenProperty(word, "rotation", centre - swing, period / 2f)
+            .SetEase(Tween.EaseType.InOut).SetTrans(Tween.TransitionType.Sine);
+
+        _loops.Add(rock);
     }
 
     private static IEnumerable<Control> Siblings(Node? parent) =>
