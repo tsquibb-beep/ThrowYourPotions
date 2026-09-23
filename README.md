@@ -32,7 +32,7 @@ that copy is read in preference to the one in the mod folder.
 | `fontSize`, `textColor`, `outlineColor`, `outlineSize` | 140, cream, near-black, 24 | How the text looks. |
 | `holdSeconds` | `1.4` | How long it stays before fading. |
 | `screenShake` | `true` | Rumbles the screen for as long as the text is up. |
-| `coinExplosion` | `true` | A burst of gold coins behind the text. |
+| `splats`, `splatCount`, `splatScaleMin`, `splatScaleMax` | true, 14, 1.4, 3.2 | Slime splats going off around the text. |
 | `wackyCase` | `true` | rAnDoM cAsE, re-rolled every time. |
 | `soundCount` | `10` | How many merchant noises. This is the point of the mod. |
 | `soundGapSeconds` | `0.12` | Gap between them. Small, so they overlap. |

@@ -46,9 +46,20 @@ internal sealed class ThrowConfig
     [JsonPropertyName("screenShake")]
     public bool ScreenShake { get; set; } = true;
 
-    /// <summary>Burst of gold coins behind the text — he pays you 100 gold for the throw.</summary>
-    [JsonPropertyName("coinExplosion")]
-    public bool CoinExplosion { get; set; } = true;
+    /// <summary>Slime splats going off around the text — the Foul Potion's own splat effect.</summary>
+    [JsonPropertyName("splats")]
+    public bool Splats { get; set; } = true;
+
+    /// <summary>How many splats over the life of the banner.</summary>
+    [JsonPropertyName("splatCount")]
+    public int SplatCount { get; set; } = 14;
+
+    /// <summary>Size range for the splats. The effect is small at 1, so these scale it up.</summary>
+    [JsonPropertyName("splatScaleMin")]
+    public float SplatScaleMin { get; set; } = 1.4f;
+
+    [JsonPropertyName("splatScaleMax")]
+    public float SplatScaleMax { get; set; } = 3.2f;
 
     /// <summary>Random upper/lower case, re-rolled every time, so it never looks the same twice.</summary>
     [JsonPropertyName("wackyCase")]

@@ -34,7 +34,7 @@ public class ThrowConsoleCmd : AbstractConsoleCmd
                 ThrowConfig fresh = ThrowConfig.Reload();
                 return new CmdResult(success: true,
                     $"Config reloaded: text={fresh.ShowText}, sounds={fresh.Sounds} in waves of {fresh.SoundEvents(false).Count} "
-                    + $"every {fresh.Wave:0.00}s, hold={fresh.Hold:0.00}s, coins={fresh.CoinExplosion}, wacky={fresh.WackyCase}.");
+                    + $"every {fresh.Wave:0.00}s, hold={fresh.Hold:0.00}s, splats={fresh.SplatCount}, wacky={fresh.WackyCase}.");
             }
 
             case "diag":
@@ -50,7 +50,7 @@ public class ThrowConsoleCmd : AbstractConsoleCmd
 
             case "vfx":
             {
-                string path = args.Length > 1 ? args[1] : MegaCrit.Sts2.Core.Commands.VfxCmd.coinExplosionJumboPath;
+                string path = args.Length > 1 ? args[1] : ThrowBanner.SplatPath;
                 Godot.Control? container = MegaCrit.Sts2.Core.Nodes.NRun.Instance?.GlobalUi?.AboveTopBarVfxContainer;
                 if (container == null)
                 {

@@ -23,9 +23,13 @@
     // does when you actually throw a potion at him.
     "screenShake": true,
 
-    // A burst of gold coins behind the text: throwing the potion at him pays
-    // you 100 gold, so the money is the point.
-    "coinExplosion": true,
+    // Slime splats going off around the text while it is up - the Foul Potion's
+    // own splat, so it shows you what you are being told to do. They land on a
+    // ring around the words rather than over them, at random sizes.
+    "splats": true,
+    "splatCount": 14,
+    "splatScaleMin": 1.4,
+    "splatScaleMax": 3.2,
 
     // rAnDoM cAsE, re-rolled every time so it never looks the same twice.
     "wackyCase": true,

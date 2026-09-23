@@ -31,8 +31,11 @@ internal static class ThrowBanner
     /// <summary>Shake is re-kicked this often so it runs for as long as the text is up.</summary>
     private const double ShakeTickSeconds = 0.18;
 
-    /// <summary>Backstop for freeing the coin burst if its own particles never report finished.</summary>
-    private const double CoinCleanupSeconds = 8.0;
+    /// <summary>Backstop for freeing a splat if its own particles never report finished.</summary>
+    private const double VfxCleanupSeconds = 8.0;
+
+    /// <summary>The Foul Potion's own splat — the one effect proven to render in a merchant room.</summary>
+    public const string SplatPath = "vfx/vfx_slime_impact";
 
     private static readonly Random _random = new();
 
@@ -51,10 +54,10 @@ internal static class ThrowBanner
         // Two banners can never stack, however fast the rooms change.
         container.GetNodeOrNull<Label>(NodeName)?.QueueFreeSafely();
 
-        // Coins first, so they burst behind the text rather than over it.
-        if (config.CoinExplosion)
+        // Splats first, so they land behind the text rather than over it.
+        if (config.Splats)
         {
-            ShowCoins(container);
+            SplatStorm(container, config);
         }
 
         var label = new Label
@@ -151,64 +154,123 @@ internal static class ThrowBanner
     }
 
     /// <summary>
-    /// A jumbo burst of gold coins, centre screen — he pays 100 gold for a thrown Foul Potion,
-    /// so the money is the point. Spawned the way the game spawns its own non-combat VFX.
+    /// Slime splats going off around the text for as long as it is up.
+    ///
+    /// They are scattered on a ring around the centre so they frame the words rather than cover
+    /// them, at random sizes, and the timings are jittered so it reads as a barrage rather than a
+    /// metronome. The Foul Potion's own splat is used deliberately: it is what the game itself
+    /// fires in a merchant room, and it shows the player exactly what they are being told to do.
     /// </summary>
-    private static void ShowCoins(Control container) => ShowVfx(container, VfxCmd.coinExplosionJumboPath);
+    private static void SplatStorm(Control container, ThrowConfig config)
+    {
+        SceneTree? tree = container.GetTree();
+        if (tree == null)
+        {
+            return;
+        }
+
+        Rect2 viewport = container.GetViewportRect();
+        Vector2 centre = viewport.Position + (viewport.Size / 2f);
+
+        // Keep them going from the slam until the text starts to fade.
+        double window = Math.Max(0.1, SpinSeconds + config.Hold);
+        int count = config.SplatCount;
+
+        for (int i = 0; i < count; i++)
+        {
+            // Spread evenly over the window, then jitter, so none of it looks scheduled.
+            double at = (window * i / Math.Max(1, count)) + (_random.NextDouble() * 0.12);
+
+            double angle = _random.NextDouble() * Math.Tau;
+            float radiusX = (float)(viewport.Size.X * (0.16 + (_random.NextDouble() * 0.28)));
+            float radiusY = (float)(viewport.Size.Y * (0.14 + (_random.NextDouble() * 0.30)));
+            var at2 = new Vector2(
+                centre.X + (radiusX * (float)Math.Cos(angle)),
+                centre.Y + (radiusY * (float)Math.Sin(angle)));
+
+            float scale = config.SplatScaleMin
+                + ((float)_random.NextDouble() * Math.Max(0f, config.SplatScaleMax - config.SplatScaleMin));
+
+            ScheduleOnce(tree, at, () => ShowVfx(container, SplatPath, at2, scale, log: false));
+        }
+    }
 
     /// <summary>
-    /// Drops a VFX scene centre screen.
+    /// Drops a VFX scene on the screen.
     ///
     /// Parented to the merchant room rather than the UI container: that is where the game puts its
-    /// own merchant-room effect (FoulPotion's slime splat), and world-space particle scenes do not
-    /// necessarily render as a child of a UI Control.
+    /// own merchant-room effect (FoulPotion's slime splat), and a world-space particle scene does
+    /// not reliably render as the child of a UI Control — the coin burst was invisible for exactly
+    /// that reason.
     /// </summary>
-    public static void ShowVfx(Control container, string vfxPath)
+    public static void ShowVfx(Control container, string vfxPath, Vector2? position = null, float scale = 1f, bool log = true)
     {
         try
         {
             Rect2 viewport = container.GetViewportRect();
-            Vector2 centre = viewport.Position + (viewport.Size / 2f);
+            Vector2 at = position ?? viewport.Position + (viewport.Size / 2f);
             Node parent = (Node?)NMerchantRoom.Instance ?? container;
-            Node2D? coins = VfxCmd.PlayNonCombatVfx(parent, centre, vfxPath);
-            if (coins == null)
+            Node2D? vfx = VfxCmd.PlayNonCombatVfx(parent, at, vfxPath);
+            if (vfx == null)
             {
                 return;
             }
 
             // AddChildSafely may defer to the next idle frame, and a GlobalPosition written before
-            // the node is in the tree is measured against nothing — the burst then lands wherever
-            // the container's own transform puts it, usually off screen. Place it once it is in.
+            // the node is in the tree is measured against nothing. Place it once it is in.
             Callable.From(() =>
             {
-                if (!GodotObject.IsInstanceValid(coins) || !coins.IsInsideTree())
+                if (!GodotObject.IsInstanceValid(vfx) || !vfx.IsInsideTree())
                 {
                     return;
                 }
 
-                coins.GlobalPosition = centre;
+                vfx.GlobalPosition = at;
+                vfx.Scale = Vector2.One * scale;
 
-                Log.Info($"[ThrowYourPotions] Vfx '{vfxPath}': at={coins.GlobalPosition}, wanted={centre}, "
-                    + $"visible={coins.Visible}, scale={coins.Scale}, zIndex={coins.ZIndex}, "
-                    + $"parent={coins.GetParent()?.Name}, children={coins.GetChildCount()}.");
+                if (log)
+                {
+                    Log.Info($"[ThrowYourPotions] Vfx '{vfxPath}': at={vfx.GlobalPosition}, wanted={at}, "
+                        + $"visible={vfx.Visible}, scale={vfx.Scale}, zIndex={vfx.ZIndex}, "
+                        + $"parent={vfx.GetParent()?.Name}, children={vfx.GetChildCount()}.");
+                }
             }).CallDeferred();
 
             // Particle scenes usually free themselves when they finish, but not every one does,
-            // so put a backstop on it rather than leaving a node parked on the run's UI.
-            container.GetTree()
-                .CreateTimer(CoinCleanupSeconds, processAlways: true, processInPhysics: false, ignoreTimeScale: true)
-                .Timeout += () =>
+            // so put a backstop on it rather than leaving nodes parked on the room.
+            ScheduleOnce(container.GetTree(), VfxCleanupSeconds, () =>
+            {
+                if (GodotObject.IsInstanceValid(vfx))
                 {
-                    if (GodotObject.IsInstanceValid(coins))
-                    {
-                        coins.QueueFreeSafely();
-                    }
-                };
+                    vfx.QueueFreeSafely();
+                }
+            });
         }
         catch (Exception ex)
         {
             Log.Warn($"[ThrowYourPotions] Vfx '{vfxPath}' failed: {ex.Message}");
         }
+    }
+
+    private static void ScheduleOnce(SceneTree? tree, double seconds, Action action)
+    {
+        if (tree == null)
+        {
+            return;
+        }
+
+        tree.CreateTimer(Math.Max(0.001, seconds), processAlways: true, processInPhysics: false, ignoreTimeScale: true)
+            .Timeout += () =>
+            {
+                try
+                {
+                    action();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn($"[ThrowYourPotions] Splat step failed: {ex.Message}");
+                }
+            };
     }
 
     /// <summary>
