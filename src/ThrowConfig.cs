@@ -46,6 +46,10 @@ internal sealed class ThrowConfig
     [JsonPropertyName("screenShake")]
     public bool ScreenShake { get; set; } = true;
 
+    /// <summary>Random upper/lower case, re-rolled every time, so it never looks the same twice.</summary>
+    [JsonPropertyName("wackyCase")]
+    public bool WackyCase { get; set; } = true;
+
     /// <summary>How many merchant noises to play. Ten is the point of the mod.</summary>
     [JsonPropertyName("soundCount")]
     public int SoundCount { get; set; } = 10;

@@ -26,6 +26,11 @@ internal static class ThrowBanner
     private const double FadeOutSeconds = 0.45;
     private const float ExitScale = 1.15f;
 
+    /// <summary>Shake is re-kicked this often so it runs for as long as the text is up.</summary>
+    private const double ShakeTickSeconds = 0.18;
+
+    private static readonly Random _random = new();
+
     private static bool _loggedFirstBanner;
 
     public static void Show(ThrowConfig config)
@@ -44,7 +49,7 @@ internal static class ThrowBanner
         var label = new Label
         {
             Name = NodeName,
-            Text = config.Text,
+            Text = config.WackyCase ? WackyCase(config.Text) : config.Text,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             AutowrapMode = TextServer.AutowrapMode.Off,
@@ -111,7 +116,14 @@ internal static class ThrowBanner
 
         if (config.ScreenShake)
         {
-            tween.TweenCallback(Callable.From(Impact)).SetDelay(ImpactAtSeconds);
+            // One shake is over in a moment, so re-kick it on a tick for as long as the text is
+            // on screen. The game's own shakes are short by design; this keeps the rumble going
+            // from the slam right through to the fade-out.
+            double shakeUntil = SpinSeconds + config.Hold + FadeOutSeconds;
+            for (double at = ImpactAtSeconds; at < shakeUntil; at += ShakeTickSeconds)
+            {
+                tween.TweenCallback(Callable.From(Impact)).SetDelay(at);
+            }
         }
 
         tween.Chain();
@@ -125,6 +137,37 @@ internal static class ThrowBanner
 
         tween.Chain();
         tween.TweenCallback(Callable.From(() => label.QueueFreeSafely()));
+    }
+
+    /// <summary>
+    /// rAnDoM cAsE, re-rolled on every showing so it never looks the same twice. Runs of three
+    /// identical cases are broken up, otherwise the coin flips clump and it just looks like a typo.
+    /// </summary>
+    private static string WackyCase(string text)
+    {
+        char[] chars = text.ToCharArray();
+        bool lastUpper = false;
+        int run = 0;
+
+        for (int i = 0; i < chars.Length; i++)
+        {
+            if (!char.IsLetter(chars[i]))
+            {
+                continue;
+            }
+
+            bool upper = _random.Next(2) == 0;
+            if (run >= 2 && upper == lastUpper)
+            {
+                upper = !upper;
+            }
+
+            run = upper == lastUpper ? run + 1 : 0;
+            lastUpper = upper;
+            chars[i] = upper ? char.ToUpperInvariant(chars[i]) : char.ToLowerInvariant(chars[i]);
+        }
+
+        return new string(chars);
     }
 
     private static void Impact()

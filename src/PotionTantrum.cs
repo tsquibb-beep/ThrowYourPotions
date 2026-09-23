@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Godot;
+using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Context;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Models.Events;
@@ -13,12 +15,13 @@ using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Audio;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.TestSupport;
 
 namespace ThrowYourPotions;
 
 /// <summary>
 /// Decides whether to kick off, and schedules the racket. Nothing here is allowed to throw:
-/// this runs inside the game's room-entry path.
+/// it runs inside the game's room-entry path.
 /// </summary>
 internal static class PotionTantrum
 {
@@ -29,6 +32,8 @@ internal static class PotionTantrum
     private static readonly ConditionalWeakTable<AbstractRoom, object> _handled = new();
 
     private static readonly object _marker = new();
+
+    private static bool _loggedSoundDiagnostics;
 
     public static void OnRoomEntered(IRunState? runState, AbstractRoom? room)
     {
@@ -67,31 +72,100 @@ internal static class PotionTantrum
                 return;
             }
 
-            SceneTree? tree = NRun.Instance?.GetTree();
-            if (tree == null)
-            {
-                Log.Warn("[ThrowYourPotions] No run node to schedule against; skipping.");
-                return;
-            }
-
             Log.Info($"[ThrowYourPotions] Merchant entered holding {foul} Foul Potion(s); firing in "
                 + $"{config.Delay:0.00}s (text={config.ShowText}, sounds={config.Sounds}, fake={fakeMerchant}).");
 
-            if (config.ShowText)
-            {
-                ScheduleOnce(tree, config.Delay, () => ThrowBanner.Show(config));
-            }
-
-            IReadOnlyList<string> events = config.SoundEvents(fakeMerchant);
-            for (int i = 0; i < config.Sounds; i++)
-            {
-                string sfx = events[i % events.Count];
-                ScheduleOnce(tree, config.Delay + (i * config.Gap), () => Play(sfx, config.Volume));
-            }
+            FireAfterDelay(config, fakeMerchant, config.Delay);
         }
         catch (Exception ex)
         {
             Log.Error($"[ThrowYourPotions] Failed on room entry: {ex}");
+        }
+    }
+
+    /// <summary>Everything at once, right now — the console command's entry point.</summary>
+    public static void FireNow(ThrowConfig config, bool fakeMerchant) => FireAfterDelay(config, fakeMerchant, 0f);
+
+    private static void FireAfterDelay(ThrowConfig config, bool fakeMerchant, float delay)
+    {
+        SceneTree? tree = Tree();
+        if (tree == null)
+        {
+            Log.Warn("[ThrowYourPotions] No scene tree to schedule against; skipping.");
+            return;
+        }
+
+        if (config.ShowText)
+        {
+            ScheduleOnce(tree, delay, () => ThrowBanner.Show(config));
+        }
+
+        ScheduleOnce(tree, delay, () => FireSounds(config, fakeMerchant));
+    }
+
+    /// <summary>
+    /// Kicks off the noise. Sounds are scheduled from here rather than from the banner so that
+    /// they still play with the text turned off.
+    /// </summary>
+    public static void FireSounds(ThrowConfig config, bool fakeMerchant)
+    {
+        SceneTree? tree = Tree();
+        if (tree == null || config.Sounds <= 0)
+        {
+            return;
+        }
+
+        if (!_loggedSoundDiagnostics)
+        {
+            _loggedSoundDiagnostics = true;
+            Log.Info($"[ThrowYourPotions] Sound check — {Diagnostics()}");
+        }
+
+        IReadOnlyList<string> events = config.SoundEvents(fakeMerchant);
+        for (int i = 0; i < config.Sounds; i++)
+        {
+            string sfx = events[i % events.Count];
+            ScheduleOnce(tree, i * config.Gap, () => Play(sfx, config.Volume));
+        }
+    }
+
+    /// <summary>State that would explain silence, printed by `tyt diag` and once per session.</summary>
+    public static string Diagnostics()
+    {
+        string audio;
+        try
+        {
+            audio = NAudioManager.Instance == null ? "NULL" : "ok";
+        }
+        catch (Exception ex)
+        {
+            audio = $"threw {ex.GetType().Name}";
+        }
+
+        string combat;
+        try
+        {
+            combat = CombatManager.Instance == null ? "NULL" : $"ending={CombatManager.Instance.IsEnding}";
+        }
+        catch (Exception ex)
+        {
+            combat = $"threw {ex.GetType().Name}";
+        }
+
+        return $"audioManager={audio}, combatManager={combat}, testMode={TestMode.IsOn}, "
+            + $"nonInteractive={NonInteractiveMode.IsActive}, tree={(Tree() == null ? "NULL" : "ok")}, "
+            + $"volume={ThrowConfig.Current.Volume:0.00}";
+    }
+
+    private static SceneTree? Tree()
+    {
+        try
+        {
+            return NRun.Instance?.GetTree() ?? NGame.Instance?.GetTree();
+        }
+        catch (Exception)
+        {
+            return null;
         }
     }
 
@@ -156,15 +230,15 @@ internal static class PotionTantrum
 
     private static void Play(string sfx, float volume)
     {
-        try
+        // Go straight to the audio manager. SfxCmd.Play reaches through CombatManager on its way
+        // there and silently drops the sound in some states.
+        NAudioManager? audio = NAudioManager.Instance;
+        if (audio == null)
         {
-            SfxCmd.Play(sfx, volume);
+            Log.Warn("[ThrowYourPotions] No audio manager; sound skipped.");
+            return;
         }
-        catch (Exception)
-        {
-            // SfxCmd reaches through CombatManager on its way to the audio manager; if that is not
-            // ready, go direct rather than losing the noise.
-            NAudioManager.Instance?.PlayOneShot(sfx, volume);
-        }
+
+        audio.PlayOneShot(sfx, volume);
     }
 }

@@ -19,9 +19,12 @@
     // How long the text sits there before fading out, in seconds.
     "holdSeconds": 1.4,
 
-    // Kick the screen as the text lands, like the merchant room does when you
-    // actually throw a potion at him.
+    // Rumble the screen for as long as the text is up, like the merchant room
+    // does when you actually throw a potion at him.
     "screenShake": true,
+
+    // rAnDoM cAsE, re-rolled every time so it never looks the same twice.
+    "wackyCase": true,
 
     // The racket. soundCount is how many of his noises play; soundGapSeconds is
     // the gap between them, small enough that they pile up on top of each other.
