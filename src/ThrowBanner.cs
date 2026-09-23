@@ -31,7 +31,7 @@ internal static class ThrowBanner
 
     private const double SlamSeconds = 0.32;
     private const double FadeInSeconds = 0.10;
-    private const double FadeOutSeconds = 0.45;
+    private const double FadeOutSeconds = 0.35;
     private const float ExitScale = 1.12f;
 
     /// <summary>Shake is re-kicked this often so it runs for as long as the text is up.</summary>
@@ -177,6 +177,30 @@ internal static class ThrowBanner
         {
             StartStrobe(stack, config, letters);
         }
+
+        if (config.ScreenShake)
+        {
+            StartShake(stack, config);
+        }
+    }
+
+    /// <summary>
+    /// A rolling rumble for as long as the banner is up. It lives on its own tween rather than on
+    /// the words': a callback scheduled on the same tween as the words' animation delays the chain
+    /// that follows it, which is what made the banner overstay and the last word pulse late.
+    /// </summary>
+    private static void StartShake(Control stack, ThrowConfig config)
+    {
+        Tween shake = stack.CreateTween();
+        double until = DurationSeconds(config) - FadeOutSeconds;
+
+        for (double at = 0; at < until; at += ShakeTickSeconds)
+        {
+            shake.TweenCallback(Callable.From(Impact));
+            shake.TweenInterval(ShakeTickSeconds);
+        }
+
+        _loops.Add(shake);
     }
 
     /// <summary>
@@ -248,22 +272,13 @@ internal static class ThrowBanner
             .From(0f)
             .SetDelay(delay);
 
-        if (config.ScreenShake)
-        {
-            // A kick as each word lands, then a rolling rumble for as long as the text is up.
-            double until = last ? SlamSeconds + config.Hold : SlamSeconds;
-            for (double at = delay; at < delay + until; at += ShakeTickSeconds)
-            {
-                tween.TweenCallback(Callable.From(Impact)).SetDelay(at);
-            }
-        }
-
         // Once it has landed, let it breathe: a size wobble at its own speed, so the three words
-        // are never in step with each other.
+        // are never in step with each other. Given its own delay rather than chained, because
+        // Chain() waits for every tweener in the group above, not just the ones it follows.
         if (config.JitterAmount > 0f && config.SizeJitter)
         {
-            tween.Chain();
-            tween.TweenCallback(Callable.From(() => StartSizePulse(word, config)));
+            tween.TweenCallback(Callable.From(() => StartSizePulse(word, config)))
+                .SetDelay(delay + SlamSeconds);
         }
 
         if (!last)
@@ -271,7 +286,9 @@ internal static class ThrowBanner
             return;
         }
 
-        // Take the whole stack out together, once the last word has had its hold.
+        // Take the whole stack out together, once the last word has had its hold. The interval is
+        // given the same delay treatment: chaining alone would queue it after the longest tweener
+        // in the parallel group above, which silently doubled the time the banner stayed up.
         tween.Chain();
         tween.TweenInterval(config.Hold);
 

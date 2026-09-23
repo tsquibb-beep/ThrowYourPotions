@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Godot;
 using MegaCrit.Sts2.Core.Audio;
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Logging;
 
 namespace ThrowYourPotions;
@@ -68,7 +69,7 @@ internal sealed class ThrowConfig
 
     /// <summary>How long the text sits there before it fades out.</summary>
     [JsonPropertyName("holdSeconds")]
-    public float HoldSeconds { get; set; } = 2.4f;
+    public float HoldSeconds { get; set; } = 1.1f;
 
     [JsonPropertyName("screenShake")]
     public bool ScreenShake { get; set; } = true;
@@ -101,7 +102,7 @@ internal sealed class ThrowConfig
 
     /// <summary>Gap between each word landing, so they stack up one at a time.</summary>
     [JsonPropertyName("wordStepSeconds")]
-    public float WordStepSeconds { get; set; } = 0.2f;
+    public float WordStepSeconds { get; set; } = 0.15f;
 
     /// <summary>How crooked the words sit, in degrees, alternating side to side.</summary>
     [JsonPropertyName("wordTiltDegrees")]
@@ -136,6 +137,10 @@ internal sealed class ThrowConfig
 
     [JsonPropertyName("soundVolume")]
     public float SoundVolume { get; set; } = 1.0f;
+
+    /// <summary>Mix the game's gold sounds in with his noises — he is paying you, after all.</summary>
+    [JsonPropertyName("moneySounds")]
+    public bool MoneySounds { get; set; } = true;
 
     /// <summary>
     /// "buy" is his purchase noise alone; "mix" cycles every noise he has.
@@ -220,9 +225,10 @@ internal sealed class ThrowConfig
             return new[] { fakeMerchant ? FmodSfx.fakeMerchantLaugh : FmodSfx.merchantThankYou };
         }
 
-        // Every noise he has. The laugh belongs to the fake merchant but is funny anywhere, and a
-        // fifth distinct event means a fifth voice that can sound at the same time as the others.
-        return new[]
+        // Every noise he has, plus the game's three gold sounds. The laugh belongs to the fake
+        // merchant but is funny anywhere. Each distinct event is another voice that can sound at
+        // the same time as the others, so a wider pool is a denser racket as well as a richer one.
+        var pool = new List<string>
         {
             FmodSfx.merchantThankYou,
             FmodSfx.merchantWelcome,
@@ -230,6 +236,17 @@ internal sealed class ThrowConfig
             FmodSfx.merchantDisappointment,
             FmodSfx.fakeMerchantLaugh,
         };
+
+        if (MoneySounds)
+        {
+            // Interleaved rather than appended, so the coins land among the gibbering instead of
+            // all arriving together at the end of a wave.
+            pool.Insert(1, PlayerCmd.goldLargeSfx);
+            pool.Insert(3, PlayerCmd.goldMediumSfx);
+            pool.Insert(6, PlayerCmd.goldSmallSfx);
+        }
+
+        return pool;
     }
 
     private static Color ParseColor(string value, string fallback)

@@ -34,7 +34,7 @@
     // The words land one at a time, stacked down the screen and sitting crooked.
     // wordStepSeconds is the beat between them; wordTiltDegrees is how skewed
     // they sit, alternating side to side.
-    "wordStepSeconds": 0.2,
+    "wordStepSeconds": 0.15,
     "wordTiltDegrees": 6,
 
     // Full-screen colour wash as the text lands. Fades out by itself.
@@ -46,7 +46,7 @@
     "outlineSize": 24,
 
     // How long the text sits there before fading out, in seconds.
-    "holdSeconds": 2.4,
+    "holdSeconds": 1.1,
 
     // Rumble the screen for as long as the text is up, like the merchant room
     // does when you actually throw a potion at him.
@@ -72,6 +72,9 @@
     "soundGapSeconds": 0.08,
     "soundWaveSeconds": 1.3,
     "soundVolume": 1.0,
+
+    // Mix the game's gold sounds in with his noises - he is paying you, after all.
+    "moneySounds": true,
 
     // "mix" cycles everything he has: the thank you, the welcome, the idle
     // mumble and the disappointed grunt. At the Fake Merchant, both add his laugh.

@@ -44,6 +44,7 @@ that copy is read in preference to the one in the mod folder.
 | `soundGapSeconds` | `0.12` | Gap between them. Small, so they overlap. |
 | `soundVolume` | `1.0` | Quieter, if you are a coward. |
 | `soundSet` | `"mix"` | `"buy"` is his purchase noise alone; `"mix"` cycles every noise he has, which is denser. |
+| `moneySounds` | `true` | Mixes the game's gold sounds in with his noises. |
 | `soundWaveSeconds` | `1.3` | How long before the same noise can play again. Lower it for a faster racket. |
 | `delaySeconds` | `0.6` | Wait after arriving, so it does not play under the room's fade-in. |
 
