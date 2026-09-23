@@ -16,8 +16,14 @@
     //   textStyle:  "rainbow" (every letter a different colour), "gold",
     //               "slime" (Foul Potion green), or "plain" (one flat colour)
     //   textMotion: "jitter" (shakes), "sine" (bobs), or "none"
-    "textStyle": "rainbow",
+    "textStyle": "gold",
     "textMotion": "jitter",
+
+    // The words land one at a time, stacked down the screen and sitting crooked.
+    // wordStepSeconds is the beat between them; wordTiltDegrees is how skewed
+    // they sit, alternating side to side.
+    "wordStepSeconds": 0.2,
+    "wordTiltDegrees": 6,
 
     // Full-screen colour wash as the text lands. Fades out by itself.
     "flash": true,
@@ -60,7 +66,7 @@
     // "buy" repeats only his purchase noise — but the sound engine refuses to
     // play a voice line over itself, so "buy" ends up almost silent. Mix is the
     // default for that reason.
-    "soundSet": "mix",
+    "soundSet": "buy",
 
     // How long to wait after arriving before going off. Room entry happens behind
     // a fade to black, so firing immediately would play under it.

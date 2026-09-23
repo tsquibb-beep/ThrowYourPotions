@@ -66,11 +66,19 @@ internal sealed class ThrowConfig
     /// Foul Potion green, "plain" a single flat colour with no per-letter effects.
     /// </summary>
     [JsonPropertyName("textStyle")]
-    public string TextStyle { get; set; } = "rainbow";
+    public string TextStyle { get; set; } = "gold";
 
     /// <summary>Per-letter motion: "jitter" shakes, "sine" bobs, "none" holds still.</summary>
     [JsonPropertyName("textMotion")]
     public string TextMotion { get; set; } = "jitter";
+
+    /// <summary>Gap between each word landing, so they stack up one at a time.</summary>
+    [JsonPropertyName("wordStepSeconds")]
+    public float WordStepSeconds { get; set; } = 0.2f;
+
+    /// <summary>How crooked the words sit, in degrees, alternating side to side.</summary>
+    [JsonPropertyName("wordTiltDegrees")]
+    public float WordTiltDegrees { get; set; } = 6f;
 
     /// <summary>Full-screen colour wash as the text lands.</summary>
     [JsonPropertyName("flash")]
@@ -103,11 +111,15 @@ internal sealed class ThrowConfig
     public float SoundVolume { get; set; } = 1.0f;
 
     /// <summary>
-    /// "mix" cycles every noise he has, and is the default because FMOD refuses to stack repeated
-    /// instances of the same voice event — "buy" on its own plays once and swallows the other nine.
+    /// "buy" is his purchase noise alone; "mix" cycles every noise he has.
+    ///
+    /// The sound engine refuses a second instance of the same voice event while the first is still
+    /// playing, so "buy" cannot overlap itself — it repeats once per wave instead, and the total is
+    /// capped to what fits in the banner's lifetime. "mix" is the denser option because five
+    /// distinct noises can sound at once; lower soundWaveSeconds to make "buy" repeat faster.
     /// </summary>
     [JsonPropertyName("soundSet")]
-    public string SoundSet { get; set; } = "mix";
+    public string SoundSet { get; set; } = "buy";
 
     /// <summary>
     /// Wait this long after arriving before going off. Room entry happens behind a fade to black
@@ -150,9 +162,13 @@ internal sealed class ThrowConfig
 
     public Color FlashColor => ParseColor(FlashColorHex, "#4fd14f");
 
-    public string Style => (TextStyle ?? "rainbow").Trim().ToLowerInvariant();
+    public string Style => (TextStyle ?? "gold").Trim().ToLowerInvariant();
 
     public string Motion => (TextMotion ?? "jitter").Trim().ToLowerInvariant();
+
+    public float WordStep => Math.Clamp(WordStepSeconds, 0f, 2f);
+
+    public float WordTilt => Math.Clamp(WordTiltDegrees, 0f, 45f);
 
     public bool MixSounds => string.Equals(SoundSet?.Trim(), "mix", StringComparison.OrdinalIgnoreCase);
 

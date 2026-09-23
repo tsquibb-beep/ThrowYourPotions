@@ -126,7 +126,22 @@ internal static class PotionTantrum
         // and drop the rest — which is exactly what it did. Instead: every distinct noise at once,
         // then the whole set again once they have finished.
         IReadOnlyList<string> events = config.SoundEvents(fakeMerchant);
-        for (int i = 0; i < config.Sounds; i++)
+
+        // How many will actually fit. A wave can hold one instance of each distinct noise, and the
+        // next wave cannot start until those have finished, so the ceiling is (distinct noises x
+        // waves that fit in the banner's lifetime). Asking for more than that would queue noises
+        // to play into an empty screen long after the text has gone.
+        double window = Math.Max(config.Wave, ThrowBanner.DurationSeconds(config));
+        int waves = Math.Max(1, (int)Math.Ceiling(window / config.Wave));
+        int count = Math.Min(config.Sounds, events.Count * waves);
+
+        if (count < config.Sounds)
+        {
+            Log.Info($"[ThrowYourPotions] {config.Sounds} noises asked for, {count} fit: {events.Count} distinct "
+                + $"noise(s) x {waves} wave(s) in {window:0.0}s. Lower soundWaveSeconds or raise holdSeconds for more.");
+        }
+
+        for (int i = 0; i < count; i++)
         {
             string sfx = events[i % events.Count];
             double at = ((i / events.Count) * config.Wave) + ((i % events.Count) * config.Gap);

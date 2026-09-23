@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using Godot;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
-using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.Core.Nodes.Vfx.Utilities;
 using MegaCrit.Sts2.addons.mega_text;
@@ -12,22 +15,24 @@ using MegaCrit.Sts2.addons.mega_text;
 namespace ThrowYourPotions;
 
 /// <summary>
-/// The big text. Built imperatively from a stock Godot Label: the mod assembly gets no Godot
-/// source generators, so it must not subclass node types, and the game's own MegaRichTextLabel
-/// asserts a theme font override in _Ready and throws without one.
+/// The big text: one label per word, slamming in one after another down the screen, each sitting
+/// at its own crooked angle.
+///
+/// Everything is built imperatively — the mod assembly gets no Godot source generators, so it must
+/// not subclass node types. It may instantiate the game's own classes, which is how the rich label
+/// (and its per-letter colour and jitter effects) is used here.
 /// </summary>
 internal static class ThrowBanner
 {
     private const string NodeName = "ThrowYourPotionsBanner";
 
-    private const float StartScale = 3.2f;
-    private const float StartRotationDegrees = -22f;
-    private const double SlamSeconds = 0.40;
-    private const double SpinSeconds = 0.50;
-    private const double FadeInSeconds = 0.12;
-    private const double ImpactAtSeconds = 0.30;
+    /// <summary>Each word lands from this much oversized.</summary>
+    private const float StartScale = 2.4f;
+
+    private const double SlamSeconds = 0.32;
+    private const double FadeInSeconds = 0.10;
     private const double FadeOutSeconds = 0.45;
-    private const float ExitScale = 1.15f;
+    private const float ExitScale = 1.12f;
 
     /// <summary>Shake is re-kicked this often so it runs for as long as the text is up.</summary>
     private const double ShakeTickSeconds = 0.18;
@@ -42,20 +47,29 @@ internal static class ThrowBanner
 
     private static bool _loggedFirstBanner;
 
+    /// <summary>
+    /// Roughly how long the whole banner lasts, so the noise can be made to last the same.
+    /// </summary>
+    public static double DurationSeconds(ThrowConfig config)
+    {
+        int words = Words(config.Text).Length;
+        return (Math.Max(0, words - 1) * config.WordStep) + SlamSeconds + config.Hold + FadeOutSeconds;
+    }
+
     public static void Show(ThrowConfig config)
     {
         Control? container = NRun.Instance?.GlobalUi?.AboveTopBarVfxContainer;
         if (container == null || !GodotObject.IsInstanceValid(container) || !container.IsInsideTree())
         {
-            // Half a second has passed since we decided to fire; the run may be over.
+            // Time has passed since we decided to fire; the run may be over.
             Log.Warn("[ThrowYourPotions] No VFX container (run ended before the banner?); skipping the text.");
             return;
         }
 
-        // Two banners can never stack, however fast the rooms change.
+        // Nothing can stack, however fast the rooms change.
         container.GetNodeOrNull<Control>(NodeName)?.QueueFreeSafely();
 
-        // Splats first, so they land behind the text rather than over it.
+        // Splats and flash first, so they sit behind the words rather than over them.
         if (config.Splats)
         {
             SplatStorm(container, config);
@@ -66,92 +80,144 @@ internal static class ThrowBanner
             ShowFlash(container, config);
         }
 
-        string words = config.WackyCase ? WackyCase(config.Text) : config.Text;
-        Font? font = container.GetThemeFont(ThemeConstants.Label.Font, "Label");
-        Control label = BuildRichLabel(container, words, font, config) ?? BuildPlainLabel(words, font, config);
+        // One parent holding every word, so the whole lot is freed and replaced as a unit.
+        var stack = new Control
+        {
+            Name = NodeName,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            ZIndex = 100,
+        };
 
-        container.AddChildSafely(label);
-
-        // AddChildSafely may defer to the next idle frame, and CreateTween needs the node in the
-        // tree, so everything that depends on that waits a frame.
-        Callable.From(() => Animate(label, font, config)).CallDeferred();
+        container.AddChildSafely(stack);
+        Callable.From(() => BuildWords(stack, container, config)).CallDeferred();
     }
 
-    private static void Animate(Control label, Font? font, ThrowConfig config)
+    private static string[] Words(string text) =>
+        text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    /// <summary>
+    /// Lays the words out as a stack and animates them in one at a time. Runs deferred, because
+    /// AddChildSafely may not have put the parent in the tree yet and CreateTween needs it there.
+    /// </summary>
+    private static void BuildWords(Control stack, Control container, ThrowConfig config)
     {
-        if (!GodotObject.IsInstanceValid(label) || !label.IsInsideTree())
+        if (!GodotObject.IsInstanceValid(stack) || !stack.IsInsideTree())
         {
             return;
         }
 
-        // Explicit size and position: SetAnchorsPreset only adjusts offsets to preserve the
-        // control's current rect, which on a fresh node is 0x0, so it would render nothing.
-        Rect2 viewport = label.GetViewportRect();
+        Rect2 viewport = stack.GetViewportRect();
+        stack.Size = viewport.Size;
+        stack.GlobalPosition = viewport.Position;
 
-        if (label is RichTextLabel)
+        string[] words = Words(config.WackyCase ? WackyCase(config.Text) : config.Text);
+        if (words.Length == 0)
         {
-            // A RichTextLabel lays its text out from the top of its rect and has no vertical
-            // alignment, so give it a band the height of one line and centre the band instead.
-            float band = config.Size * 1.6f;
-            label.Size = new Vector2(viewport.Size.X, band);
-            label.GlobalPosition = new Vector2(viewport.Position.X, viewport.Position.Y + ((viewport.Size.Y - band) / 2f));
-        }
-        else
-        {
-            label.Size = viewport.Size;
-            label.GlobalPosition = viewport.Position;
+            return;
         }
 
-        label.PivotOffset = label.Size / 2f;
-
-        // Godot 4 has no tweenable "rotation_degrees" property; set degrees, tween radians.
-        label.RotationDegrees = StartRotationDegrees;
+        Font? font = container.GetThemeFont(ThemeConstants.Label.Font, "Label");
+        float lineHeight = config.Size * 1.12f;
+        float firstLineY = (viewport.Size.Y / 2f) - (((words.Length - 1) * lineHeight) / 2f);
 
         if (!_loggedFirstBanner)
         {
             _loggedFirstBanner = true;
             Log.Info($"[ThrowYourPotions] Banner: viewport={viewport.Size}, fontSize={config.Size}, "
+                + $"words={words.Length}, step={config.WordStep:0.00}s, style={config.Style}, "
                 + $"font={(font != null ? "theme" : "Godot default")}.");
         }
 
-        Tween tween = label.CreateTween().SetParallel();
+        for (int i = 0; i < words.Length; i++)
+        {
+            Control word = BuildRichWord(container, words[i], font, config)
+                ?? BuildPlainWord(words[i], font, config);
 
-        tween.TweenProperty(label, "scale", Vector2.One, SlamSeconds)
-            .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Expo)
-            .From(Vector2.One * StartScale);
+            // A band one line tall, centred horizontally, stacked down the screen. The rich label
+            // lays its text out from the top of its rect and has no vertical alignment of its own,
+            // so the band is what positions it.
+            word.Size = new Vector2(viewport.Size.X, lineHeight);
+            word.Position = new Vector2(0f, firstLineY + (i * lineHeight) - (lineHeight / 2f));
+            word.PivotOffset = word.Size / 2f;
+            word.Modulate = new Color(1f, 1f, 1f, 0f);
 
-        // Back/Out overshoots past zero and settles back, so the wobble comes for free.
-        tween.TweenProperty(label, "rotation", 0f, SpinSeconds)
-            .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
+            // Crooked, alternating side to side so the stack looks hand-thrown rather than tidy.
+            float tilt = config.WordTilt * (i % 2 == 0 ? 1f : -1f);
+            word.RotationDegrees = tilt + ((float)(_random.NextDouble() - 0.5) * config.WordTilt);
 
-        tween.TweenProperty(label, "modulate:a", 1f, FadeInSeconds)
+            stack.AddChildSafely(word);
+
+            double at = i * config.WordStep;
+            bool last = i == words.Length - 1;
+            Control captured = word;
+            Callable.From(() => AnimateWord(captured, config, at, last)).CallDeferred();
+        }
+    }
+
+    /// <summary>
+    /// One word: a beat of nothing, then it slams in oversized and settles. The last word to land
+    /// owns the hold and takes the whole stack out with it.
+    /// </summary>
+    private static void AnimateWord(Control word, ThrowConfig config, double delay, bool last)
+    {
+        if (!GodotObject.IsInstanceValid(word) || !word.IsInsideTree())
+        {
+            return;
+        }
+
+        Tween tween = word.CreateTween().SetParallel();
+
+        tween.TweenProperty(word, "scale", Vector2.One, SlamSeconds)
+            .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back)
+            .From(Vector2.One * StartScale)
+            .SetDelay(delay);
+
+        tween.TweenProperty(word, "modulate:a", 1f, FadeInSeconds)
             .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Quad)
-            .From(0f);
+            .From(0f)
+            .SetDelay(delay);
 
         if (config.ScreenShake)
         {
-            // One shake is over in a moment, so re-kick it on a tick for as long as the text is
-            // on screen. The game's own shakes are short by design; this keeps the rumble going
-            // from the slam right through to the fade-out.
-            double shakeUntil = SpinSeconds + config.Hold + FadeOutSeconds;
-            for (double at = ImpactAtSeconds; at < shakeUntil; at += ShakeTickSeconds)
+            // A kick as each word lands, then a rolling rumble for as long as the text is up.
+            double until = last ? SlamSeconds + config.Hold : SlamSeconds;
+            for (double at = delay; at < delay + until; at += ShakeTickSeconds)
             {
                 tween.TweenCallback(Callable.From(Impact)).SetDelay(at);
             }
         }
 
+        if (!last)
+        {
+            return;
+        }
+
+        // Take the whole stack out together, once the last word has had its hold.
         tween.Chain();
         tween.TweenInterval(config.Hold);
 
         tween.Chain();
-        tween.TweenProperty(label, "modulate:a", 0f, FadeOutSeconds)
-            .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Cubic);
-        tween.TweenProperty(label, "scale", Vector2.One * ExitScale, FadeOutSeconds)
-            .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
+        Node? stack = word.GetParent();
+        foreach (Control sibling in Siblings(stack))
+        {
+            tween.TweenProperty(sibling, "modulate:a", 0f, FadeOutSeconds)
+                .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Cubic);
+            tween.TweenProperty(sibling, "scale", Vector2.One * ExitScale, FadeOutSeconds)
+                .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
+        }
 
         tween.Chain();
-        tween.TweenCallback(Callable.From(() => label.QueueFreeSafely()));
+        tween.TweenCallback(Callable.From(() =>
+        {
+            if (stack != null && GodotObject.IsInstanceValid(stack))
+            {
+                stack.QueueFreeSafely();
+            }
+        }));
     }
+
+    private static IEnumerable<Control> Siblings(Node? parent) =>
+        parent == null ? Enumerable.Empty<Control>() : parent.GetChildren().OfType<Control>();
 
     /// <summary>
     /// The game's own rich label, which gives us its per-letter effects: colour tags plus
@@ -159,7 +225,7 @@ internal static class ThrowBanner
     /// font goes on before it ever enters the tree. Returns null if anything about it misbehaves,
     /// and the caller falls back to a stock Label.
     /// </summary>
-    private static Control? BuildRichLabel(Control container, string words, Font? font, ThrowConfig config)
+    private static Control? BuildRichWord(Control container, string word, Font? font, ThrowConfig config)
     {
         if (config.Style == "plain")
         {
@@ -176,14 +242,11 @@ internal static class ThrowBanner
 
             var label = new MegaRichTextLabel
             {
-                Name = NodeName,
                 BbcodeEnabled = true,
                 AutoSizeEnabled = false,
                 FitContent = false,
                 ScrollActive = false,
                 MouseFilter = Control.MouseFilterEnum.Ignore,
-                ZIndex = 100,
-                Modulate = new Color(1f, 1f, 1f, 0f),
             };
 
             // Must be set before the node enters the tree, or _Ready throws.
@@ -191,7 +254,7 @@ internal static class ThrowBanner
             label.AddThemeFontSizeOverride(ThemeConstants.RichTextLabel.NormalFontSize, config.Size);
             label.AddThemeColorOverride(ThemeConstants.RichTextLabel.FontOutlineColor, config.OutlineColor);
             label.AddThemeConstantOverride("outline_size", config.Outline);
-            label.Text = Markup(words, config);
+            label.Text = Markup(word, config);
             return label;
         }
         catch (Exception ex)
@@ -201,18 +264,15 @@ internal static class ThrowBanner
         }
     }
 
-    private static Label BuildPlainLabel(string words, Font? font, ThrowConfig config)
+    private static Label BuildPlainWord(string word, Font? font, ThrowConfig config)
     {
         var label = new Label
         {
-            Name = NodeName,
-            Text = words,
+            Text = word,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             AutowrapMode = TextServer.AutowrapMode.Off,
             MouseFilter = Control.MouseFilterEnum.Ignore,
-            ZIndex = 100,
-            Modulate = new Color(1f, 1f, 1f, 0f),
         };
 
         if (font != null)
@@ -228,19 +288,19 @@ internal static class ThrowBanner
     }
 
     /// <summary>
-    /// Wraps the words in the game's own BBCode effects. Each letter is tagged individually rather
-    /// than nesting one big [jitter] around coloured runs, so every character reliably picks up
+    /// Wraps the word in the game's own BBCode effects. Each letter is tagged individually rather
+    /// than nesting one big [jitter] around a coloured run, so every character reliably picks up
     /// both its colour and its motion.
     /// </summary>
-    private static string Markup(string words, ThrowConfig config)
+    private static string Markup(string word, ThrowConfig config)
     {
         string[] rainbow = { "red", "orange", "gold", "green", "aqua", "blue", "purple", "pink" };
         string motion = config.Motion is "jitter" or "sine" ? config.Motion : "";
 
-        var built = new System.Text.StringBuilder("[center]");
+        var built = new StringBuilder("[center]");
         int letter = 0;
 
-        foreach (char c in words)
+        foreach (char c in word)
         {
             string colour = config.Style switch
             {
@@ -257,7 +317,7 @@ internal static class ThrowBanner
 
             string open = (colour.Length > 0 ? $"[{colour}]" : "") + (motion.Length > 0 ? $"[{motion}]" : "");
             string close = (motion.Length > 0 ? $"[/{motion}]" : "") + (colour.Length > 0 ? $"[/{colour}]" : "");
-            built.Append(open).Append(c == ' ' ? " " : c.ToString()).Append(close);
+            built.Append(open).Append(c).Append(close);
         }
 
         return built.Append("[/center]").ToString();
@@ -307,8 +367,7 @@ internal static class ThrowBanner
         Rect2 viewport = container.GetViewportRect();
         Vector2 centre = viewport.Position + (viewport.Size / 2f);
 
-        // Keep them going from the slam until the text starts to fade.
-        double window = Math.Max(0.1, SpinSeconds + config.Hold);
+        double window = Math.Max(0.1, DurationSeconds(config) - FadeOutSeconds);
         int count = config.SplatCount;
 
         for (int i = 0; i < count; i++)
@@ -319,14 +378,14 @@ internal static class ThrowBanner
             double angle = _random.NextDouble() * Math.Tau;
             float radiusX = (float)(viewport.Size.X * (0.16 + (_random.NextDouble() * 0.28)));
             float radiusY = (float)(viewport.Size.Y * (0.14 + (_random.NextDouble() * 0.30)));
-            var at2 = new Vector2(
+            var where = new Vector2(
                 centre.X + (radiusX * (float)Math.Cos(angle)),
                 centre.Y + (radiusY * (float)Math.Sin(angle)));
 
             float scale = config.SplatScaleMin
                 + ((float)_random.NextDouble() * Math.Max(0f, config.SplatScaleMax - config.SplatScaleMin));
 
-            ScheduleOnce(tree, at, () => ShowVfx(container, SplatPath, at2, scale, log: false));
+            ScheduleOnce(tree, at, () => ShowVfx(container, SplatPath, where, scale, log: false));
         }
     }
 
@@ -403,7 +462,7 @@ internal static class ThrowBanner
                 }
                 catch (Exception ex)
                 {
-                    Log.Warn($"[ThrowYourPotions] Splat step failed: {ex.Message}");
+                    Log.Warn($"[ThrowYourPotions] Scheduled step failed: {ex.Message}");
                 }
             };
     }
