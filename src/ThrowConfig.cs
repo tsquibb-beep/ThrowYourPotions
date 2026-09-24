@@ -47,9 +47,9 @@ internal sealed class ThrowConfig
     [JsonPropertyName("sizeJitter")]
     public bool SizeJitter { get; set; } = true;
 
-    /// <summary>How much bigger and smaller, as a fraction. 0.06 is a 6% wobble.</summary>
+    /// <summary>How much bigger and smaller, as a fraction. 0.16 is a 16% wobble.</summary>
     [JsonPropertyName("sizeJitterAmount")]
-    public float SizeJitterAmount { get; set; } = 0.06f;
+    public float SizeJitterAmount { get; set; } = 0.16f;
 
     /// <summary>Seconds for one breath. Each word is given its own speed around this.</summary>
     [JsonPropertyName("sizeJitterSeconds")]
@@ -68,7 +68,7 @@ internal sealed class ThrowConfig
     public float RockSeconds { get; set; } = 0.55f;
 
     [JsonPropertyName("fontSize")]
-    public int FontSize { get; set; } = 140;
+    public int FontSize { get; set; } = 210;
 
     [JsonPropertyName("textColor")]
     public string TextColorHex { get; set; } = "#fff1c9";
@@ -77,7 +77,7 @@ internal sealed class ThrowConfig
     public string OutlineColorHex { get; set; } = "#1a0f06";
 
     [JsonPropertyName("outlineSize")]
-    public int OutlineSize { get; set; } = 24;
+    public int OutlineSize { get; set; } = 54;
 
     /// <summary>How long the text sits there before it fades out.</summary>
     [JsonPropertyName("holdSeconds")]
@@ -92,21 +92,21 @@ internal sealed class ThrowConfig
 
     /// <summary>How many splats over the life of the banner.</summary>
     [JsonPropertyName("splatCount")]
-    public int SplatCount { get; set; } = 14;
+    public int SplatCount { get; set; } = 24;
 
     /// <summary>Size range for the splats. The effect is small at 1, so these scale it up.</summary>
     [JsonPropertyName("splatScaleMin")]
-    public float SplatScaleMin { get; set; } = 1.4f;
+    public float SplatScaleMin { get; set; } = 8.4f;
 
     [JsonPropertyName("splatScaleMax")]
-    public float SplatScaleMax { get; set; } = 3.2f;
+    public float SplatScaleMax { get; set; } = 16.2f;
 
     /// <summary>
     /// "rainbow" gives every letter its own colour, "gold" the game's gold treatment, "slime"
     /// Foul Potion green, "plain" a single flat colour with no per-letter effects.
     /// </summary>
     [JsonPropertyName("textStyle")]
-    public string TextStyle { get; set; } = "gold";
+    public string TextStyle { get; set; } = "slime";
 
     /// <summary>Per-letter motion: "jitter" shakes, "sine" bobs, "none" holds still.</summary>
     [JsonPropertyName("textMotion")]
@@ -131,13 +131,13 @@ internal sealed class ThrowConfig
     [JsonPropertyName("wackyCase")]
     public bool WackyCase { get; set; } = true;
 
-    /// <summary>How many merchant noises to play. Ten is the point of the mod.</summary>
+    /// <summary>How many noises to play. Capped to what fits while the text is up.</summary>
     [JsonPropertyName("soundCount")]
     public int SoundCount { get; set; } = 20;
 
     /// <summary>Gap between the noises within one wave, so they pile on top of each other.</summary>
     [JsonPropertyName("soundGapSeconds")]
-    public float SoundGapSeconds { get; set; } = 0.08f;
+    public float SoundGapSeconds { get; set; } = 0.14f;
 
     /// <summary>
     /// How long before the same noise can be used again. The sound engine will not play a voice
@@ -206,7 +206,7 @@ internal sealed class ThrowConfig
 
     public Color FlashColor => ParseColor(FlashColorHex, "#4fd14f");
 
-    public string Style => (TextStyle ?? "gold").Trim().ToLowerInvariant();
+    public string Style => (TextStyle ?? "slime").Trim().ToLowerInvariant();
 
     public string Motion => (TextMotion ?? "jitter").Trim().ToLowerInvariant();
 

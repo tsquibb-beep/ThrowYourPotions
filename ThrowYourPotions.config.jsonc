@@ -16,7 +16,7 @@
     //   textStyle:  "rainbow" (every letter a different colour), "gold",
     //               "slime" (Foul Potion green), or "plain" (one flat colour)
     //   textMotion: "jitter" (shakes), "sine" (bobs), or "none"
-    "textStyle": "gold",
+    "textStyle": "slime",
     "textMotion": "jitter",
 
     // A light running through the letters, over and over. strobeSeconds is how
@@ -33,7 +33,7 @@
 
     // Each word breathing in and out of size, each at its own speed.
     "sizeJitter": true,
-    "sizeJitterAmount": 0.06,
+    "sizeJitterAmount": 0.16,
     "sizeJitterSeconds": 0.32,
 
     // The words land one at a time, stacked down the screen and sitting crooked.
@@ -45,10 +45,10 @@
     // Full-screen colour wash as the text lands. Fades out by itself.
     "flash": true,
     "flashColor": "#4fd14f",
-    "fontSize": 140,
+    "fontSize": 210,
     "textColor": "#fff1c9",
     "outlineColor": "#1a0f06",
-    "outlineSize": 24,
+    "outlineSize": 54,
 
     // How long the text sits there before fading out, in seconds.
     "holdSeconds": 1.1,
@@ -61,9 +61,9 @@
     // own splat, so it shows you what you are being told to do. They land on a
     // ring around the words rather than over them, at random sizes.
     "splats": true,
-    "splatCount": 14,
-    "splatScaleMin": 1.4,
-    "splatScaleMax": 3.2,
+    "splatCount": 24,
+    "splatScaleMin": 8.4,
+    "splatScaleMax": 16.2,
 
     // rAnDoM cAsE, re-rolled every time so it never looks the same twice.
     "wackyCase": true,
@@ -74,7 +74,7 @@
     // soundCount is the total number played; soundGapSeconds spaces them within a
     // wave; soundWaveSeconds is how long until the same noise can be used again.
     "soundCount": 20,
-    "soundGapSeconds": 0.08,
+    "soundGapSeconds": 0.14,
     "soundWaveSeconds": 1.3,
     "soundVolume": 1.0,
 
